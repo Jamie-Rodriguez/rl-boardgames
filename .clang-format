@@ -1,0 +1,65 @@
+---
+Language: C
+BasedOnStyle: LLVM
+
+# Indentation
+UseTab: ForIndentation
+TabWidth: 8
+IndentWidth: 8
+ContinuationIndentWidth: 8
+IndentCaseLabels: false
+IndentPPDirectives: None
+NamespaceIndentation: None
+
+# Braces - K&R/Attach style
+BreakBeforeBraces: Attach
+
+# Allow short constructs on a single line
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Empty
+
+# Pointer alignment: left (e.g. char* buf)
+PointerAlignment: Left
+
+ColumnLimit: 80
+
+# Spaces
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceAfterCStyleCast: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeSquareBrackets: false
+
+# Alignment
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: None
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: true
+
+# Arguments/parameters
+BinPackArguments: true
+BinPackParameters: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowAllArgumentsOnNextLine: true
+AlignAfterOpenBracket: Align
+
+# Include sorting
+SortIncludes: false
+IncludeBlocks: Preserve
+
+# Misc
+BreakBeforeBinaryOperators: None
+BreakBeforeTernaryOperators: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+ReflowComments: true
+InsertBraces: false
+Cpp11BracedListStyle: false
+RemoveBracesLLVM: false
+
