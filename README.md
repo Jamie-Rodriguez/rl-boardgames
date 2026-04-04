@@ -63,7 +63,7 @@ Available Games
 | Game                              | Tic-Tac-Toe |
 |-----------------------------------|:-----------:|
 | Num Players                       |      2      |
-| State Size                        |      10     |
+| State Size                        |      3      |
 | Max Actions                       |      9      |
 | Observation: Number of Dimensions |      3      |
 | Observation: Dimensions           |  [2, 3, 3]  |
