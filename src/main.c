@@ -8,9 +8,9 @@ int main(int argc, char* argv[]) {
 
 	const Game* ttt = &tic_tac_toe;
 
-	uint64_t state[ttt->state_size];
-	uint64_t actions[ttt->max_actions];
-	char state_output[ttt->string_buf_size];
+	uint64_t state[TTT_STATE_SIZE]         = { 0 };
+	uint64_t actions[TTT_MAX_NUM_ACTIONS]  = { 0 };
+	char state_output[TTT_STRING_BUF_SIZE] = { 0 };
 
 	ttt->init(NULL, state);
 
@@ -28,11 +28,11 @@ int main(int argc, char* argv[]) {
 
 		ttt->apply_action(state, move);
 
-		ttt->to_string(state, ttt->string_buf_size, state_output);
+		ttt->to_string(state, TTT_STRING_BUF_SIZE, state_output);
 		printf("\n%s\n", state_output);
 	}
 
-	int64_t scores[ttt->num_players];
+	int64_t scores[TTT_NUM_PLAYERS];
 	ttt->get_outcome(state, scores);
 
 	if (scores[0] == 1)
