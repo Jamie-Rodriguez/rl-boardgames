@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "tic_tac_toe.h"
-// Auto-generated from `generate_has_win_bit_array.c`
+// Auto-generated from `generate_ttt_has_win_bit_array.c`
 #include "ttt_has_win_bit_array.h"
 
 /**
