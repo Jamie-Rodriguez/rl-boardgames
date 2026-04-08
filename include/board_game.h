@@ -60,6 +60,28 @@ typedef struct Game {
 	 */
 	uint64_t (*get_current_player)(const uint64_t state[]);
 	/**
+	 * Returns `true` if the current state is a chance node i.e. the next
+	 * action is a random outcome (a die roll, card draw, etc.) rather
+	 * than a player decision.
+	 *
+	 * When this returns `true`, the caller is responsible for sampling
+	 * one of the actions returned by `get_valid_actions()` (typically
+	 * uniformly at random) and passing it to `apply_action()`. Agents
+	 * are not consulted at chance nodes.
+	 *
+	 * Deterministic games should implement this as `return false;`.
+	 *
+	 * ASSUMPTIONS
+	 * ===========
+	 *
+	 * Caller has allocated:
+	 *
+	 * 	| parameter |      required allocation      |
+	 * 	|:---------:|:-----------------------------:|
+	 * 	| state     | STATE_SIZE * sizeof(uint64_t) |
+	 */
+	bool (*is_chance_node)(const uint64_t state[]);
+	/**
 	 * Implementation of this function should return the *total* count of
 	 * valid actions.
 	 *

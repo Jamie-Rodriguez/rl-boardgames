@@ -3,12 +3,13 @@
 
 #include "board_game.h"
 
+#define TTT_NUM_PLAYERS 2
 #define TTT_NUM_ROWS    3
 #define TTT_NUM_COLS    3
 #define TTT_BOARD_SIZE  (TTT_NUM_ROWS * TTT_NUM_COLS)
-#define TTT_NUM_PLAYERS 2
 
-#define TTT_STATE_SIZE      (1 + TTT_NUM_PLAYERS)
+#define TTT_STATE_SIZE (1 + TTT_NUM_PLAYERS)
+// Action: Which square to place piece on (0-8 for 3×3 grid)
 #define TTT_MAX_NUM_ACTIONS TTT_BOARD_SIZE
 
 /**
