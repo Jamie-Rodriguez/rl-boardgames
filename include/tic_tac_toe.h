@@ -9,7 +9,19 @@
 #define TTT_BOARD_SIZE  (TTT_NUM_ROWS * TTT_NUM_COLS)
 
 #define TTT_STATE_SIZE (1 + TTT_NUM_PLAYERS)
-// Action: Which square to place piece on (0-8 for 3×3 grid)
+
+/**
+ * Actions are board squares, addressed row-major with row 0 as the
+ * bottom row (matching the bitboard layout and help_prompt()):
+ *
+ * 	 6 | 7 | 8
+ * 	---+---+---
+ * 	 3 | 4 | 5
+ * 	---+---+---
+ * 	 0 | 1 | 2
+ */
+#define TTT_ACTION(row, col) ((uint64_t)((row) * TTT_NUM_COLS + (col)))
+
 #define TTT_MAX_NUM_ACTIONS TTT_BOARD_SIZE
 
 /**

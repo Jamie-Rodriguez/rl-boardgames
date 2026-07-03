@@ -16,6 +16,17 @@
 #define PIG_STATE_SIZE (3 + PIG_NUM_PLAYERS)
 
 /**
+ * Decision actions (valid when it is a player's turn to decide):
+ * 	PIG_ACTION_HOLD - bank the turn total and end the turn
+ * 	PIG_ACTION_ROLL - roll the die (transitions to a chance node)
+ *
+ * At chance nodes, action IDs are instead die faces (ID = face - 1,
+ * so 0..5 for faces 1..6).
+ */
+#define PIG_ACTION_HOLD 0
+#define PIG_ACTION_ROLL 1
+
+/**
  * Max across all state types:
  * 	- Decision nodes: 2 actions (HOLD, ROLL)
  * 	- Chance nodes:   6 actions (die faces)
