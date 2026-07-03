@@ -126,8 +126,8 @@ Static Fields
 
 |        Field       |      Type     |                                                   Description                                                  |
 |:------------------:|:-------------:|:--------------------------------------------------------------------------------------------------------------:|
-| `obs_dims[4]`      | `uint64_t[4]` | Shape of the observation tensor. Only the first `OBS_NDIMS` entries are meaningful (e.g. `{2, 3, 3}` for TTT). |
-| `features_dims[4]` | `uint64_t[4]` | Shape of the features tensor. Only the first `FEATURES_NDIMS` entries are meaningful.                          |
+| `obs_dims`      | `uint8_t[4]` | Shape of the observation tensor. Only the first `OBS_NDIMS` entries are meaningful (e.g. `{2, 3, 3}` for TTT). |
+| `features_dims` | `uint64_t[4]` | Shape of the features tensor. Only the first `FEATURES_NDIMS` entries are meaningful.                          |
 
 Observation vs Features
 -----------------------
