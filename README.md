@@ -3,21 +3,23 @@ This repo contains a collection of board games, written in C (C99 and built usin
 Available Games
 ===============
 
-| Game                              | Tic-Tac-Toe | Pig |
-|-----------------------------------|:-----------:|:---:|
-| Num Players                       |      2      |  2  |
-| State Size                        |      3      |  5  |
-| Max Actions                       |      9      |  6  |
-| Observation: Number of Dimensions |      3      |  1  |
-| Observation: Dimensions           |  [2, 3, 3]  | [3] |
-| Observation: Size                 |      18     |  3  |
-| Features: Number of Dimensions    |      3      |  1  |
-| Features: Dimensions              |  [2, 3, 3]  | [3] |
-| Features: Size                    |      18     |  3  |
+| Game                              | Tic-Tac-Toe | Pig | Blackjack |
+|-----------------------------------|:-----------:|:---:|:---------:|
+| Num Players                       |      2      |  2  |     1     |
+| State Size                        |      3      |  5  |     42    |
+| Max Actions                       |      9      |  6  |    312†   |
+| Observation: Number of Dimensions |      3      |  1  |     1     |
+| Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   |
+| Observation: Size                 |      18     |  3  |     31    |
+| Features: Number of Dimensions    |      3      |  1  |     1     |
+| Features: Dimensions              |  [2, 3, 3]  | [3] |    [25]   |
+| Features: Size                    |      18     |  3  |     25    |
 
 **Note:** Each game also defines a `STRING_BUF_SIZE` macro.
 
 This is not shown in the table above as it is a derived constant for internal formatting and is not relevant to agent integration.
+
+† With the default six-deck shoe: at a chance node the action-list holds one entry per card remaining, so `BLACKJACK_MAX_NUM_ACTIONS` scales as `52 * BLACKJACK_NUM_DECKS` (see [Blackjack](#blackjack)).
 
 Building
 ========
@@ -115,7 +117,7 @@ Function Pointers
 | `get_valid_actions`  | `uint64_t (const uint64_t state[], uint64_t actions_out[])`           | Write valid action IDs into `actions_out` and return the count.                                                                                                                                            |
 | `apply_action`       | `void (uint64_t state[], uint64_t action)`                            | Mutate `state` in-place by applying `action`.                                                                                                                                                              |
 | `is_terminal`        | `bool (const uint64_t state[])`                                       | Return `true` if the game is over (win, loss, or draw).                                                                                                                                                    |
-| `get_outcome`        | `void (const uint64_t state[], int64_t scores_out[])`                 | Write per-player scores into `scores_out` (e.g. +1 win, -1 loss, 0 draw). Only meaningful when terminal.                                                                                                   |
+| `get_outcome`        | `void (const uint64_t state[], int64_t scores_out[])`                 | Write per-player scores into `scores_out` (e.g. +1 win, -1 loss, 0 draw). Games may use scaled integer units - see Blackjack's half-bet scores. Only meaningful when terminal.                             |
 | `get_observation`    | `void (const uint64_t state[], uint64_t player, uint8_t* obs_out)`    | Encode the `state` as a discrete observation tensor from player's perspective.                                                                                                                             |
 | `get_features`       | `void (const uint64_t state[], uint64_t player, float* features_out)` | Encode the `state` as a floating-point feature tensor from `player`'s perspective, suitable for neural network input.                                                                                      |
 | `to_string`          | `uint64_t (const uint64_t state[], uint64_t buf_size, char* buf)`     | Write a human-readable representation of the state into `buf`. Returns the number of bytes written.                                                                                                        |
@@ -126,7 +128,7 @@ Static Fields
 
 |        Field       |      Type     |                                                   Description                                                  |
 |:------------------:|:-------------:|:--------------------------------------------------------------------------------------------------------------:|
-| `obs_dims`      | `uint8_t[4]` | Shape of the observation tensor. Only the first `OBS_NDIMS` entries are meaningful (e.g. `{2, 3, 3}` for TTT). |
+| `obs_dims`      | `uint64_t[4]` | Shape of the observation tensor. Only the first `OBS_NDIMS` entries are meaningful (e.g. `{2, 3, 3}` for TTT). |
 | `features_dims` | `uint64_t[4]` | Shape of the features tensor. Only the first `FEATURES_NDIMS` entries are meaningful.                          |
 
 Observation vs Features
@@ -180,7 +182,7 @@ If a random event decomposes into independent uniform sub-events, it is more erg
 
 The same principle/strategy applies to revealing multiple cards, rolling multiple dice, or any compound random event whose components are independent and uniform.
 
-At this point in time, I cannot envision a source of randomness in a board game that is _genuinely_ non-uniform and **cannot** be decomposed, so this is the main strategy used to model randomness. The few cases this principle does not handle are rare: inherently weighted physical randomisers (e.g. a loaded die), continuous distributions (which cannot be enumerated at all.
+The remaining cases neither strategy handles are rare: inherently weighted physical randomisers (e.g. a loaded die) and continuous distributions (which cannot be enumerated at all).
 
 Summary: Why This Design
 ------------------------
@@ -190,7 +192,7 @@ Modelling chance as a dedicated player (rather than embedding a PRNG in state) h
 - _`state` remains a pure snapshot._ Copying a state and replaying actions produces an identical trajectory only if the same chance actions are replayed; different samples give different trajectories, exactly as a real random process would. This is essential for MCTS and any algorithm that explores hypothetical futures from a saved state.
 - _No hidden RNG plumbing inside the engine._ The engine contains no global RNG, no per-state seed, and no hidden mutation across calls that misleadingly _appear_ pure. Callers bring their own PRNG, with whatever seeding and parallelism strategy suits their use case.
 - _Chance nodes are first-class citizens of the game tree._ MCTS can expand them by enumerating every possible outcome and weighting each child by its probability. Expectimax search works without special-casing. Any tree-based search algorithm handles chance naturally rather than working around it.
-- _Generalises cleanly._ The same mechanism handles dice, cards, tile draws, and any other stochastic event a future game might introduce — each game decides internally what "chance node" means via its is_chance_node() implementation.
+- _Generalises cleanly._ The same mechanism handles dice, cards, tile draws, and any other stochastic event a future game might introduce - each game decides internally what "chance node" means via its is_chance_node() implementation.
 
 The game loop differs slightly to the [deterministic game loop](#deterministic-games) in order to incorporate the chance player:
 
