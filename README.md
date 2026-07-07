@@ -5,9 +5,11 @@ Available Games
 
 | Game                              | Tic-Tac-Toe | Pig | Blackjack |
 |-----------------------------------|:-----------:|:---:|:---------:|
-| Num Players                       |      2      |  2  |     1     |
+| Number of Players                 |      2      |  2  |     1     |
 | State Size                        |      3      |  5  |     42    |
 | Max Actions                       |      9      |  6  |    312†   |
+| Max Decision Actions              |      9      |  2  |     5     |
+| Max Chance Actions                |      0      |  6  |    312†   |
 | Observation: Number of Dimensions |      3      |  1  |     1     |
 | Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   |
 | Observation: Size                 |      18     |  3  |     31    |
@@ -95,16 +97,18 @@ Required Macros
 
 Every game must define the following compile-time macros, each prefixed with a namespace (e.g. `TTT_` for Tic-Tac-Toe). These are used by callers to allocate correctly-sized buffers before calling into any `Game` function.
 
-|             Macro             |                                                     Description                                                     |
-|-------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| `<NAMESPACE>_NUM_PLAYERS`     | Number of players in the game.                                                                                      |
-| `<NAMESPACE>_STATE_SIZE`      | Number of `uint64_t` elements required to represent the full game state.                                            |
-| `<NAMESPACE>_MAX_NUM_ACTIONS` | Maximum number of actions that `get_valid_actions()` can return in any state.                                       |
-| `<NAMESPACE>_STRING_BUF_SIZE` | Minimum `char` buffer size (including null terminator) that `to_string()` requires.                                 |
-| `<NAMESPACE>_OBS_NDIMS`       | Number of dimensions in the observation tensor (e.g. `1` for a flat vector, `3` for channels × rows × cols).        |
-| `<NAMESPACE>_OBS_SIZE`        | Total number of elements in the observation. Must equal the product of the first `OBS_NDIMS` entries in `obs_dims`. |
-| `<NAMESPACE>_FEATURES_NDIMS`  | Number of dimensions in the features tensor.                                                                        |
-| `<NAMESPACE>_FEATURES_SIZE`   | Total number of elements in the features tensor.                                                                    |
+| Macro                       | Description                                                                                                                                                                                                                                            |
+|-----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `_NUM_PLAYERS`              | Number of players in the game.                                                                                                                                                                                                                         |
+| `_STATE_SIZE`               | Number of `uint64_t` elements required to represent the full game state.                                                                                                                                                                               |
+| `_MAX_NUM_ACTIONS`          | Maximum number of actions that `get_valid_actions()` can return in *any* state - always the larger of the two macros below.                                                                                                                            |
+| `_MAX_NUM_DECISION_ACTIONS` | Maximum actions at a *decision* node. Most agents only need an action buffer of this size; since the game driver, not the agent, samples chance nodes. Agents that expand chance nodes themselves (e.g. MCTS) must size for `MAX_NUM_ACTIONS` instead. |
+| `_MAX_NUM_CHANCE_ACTIONS`   | Maximum actions at a *chance* node (`0` for deterministic games).                                                                                                                                                                                      |
+| `_STRING_BUF_SIZE`          | Minimum `char` buffer size (including null terminator) that `to_string()` requires.                                                                                                                                                                    |
+| `_OBS_NDIMS`                | Number of dimensions in the observation tensor (e.g. `1` for a flat vector, `3` for channels × rows × cols).                                                                                                                                           |
+| `_OBS_SIZE`                 | Total number of elements in the observation. Must equal the product of the first `OBS_NDIMS` entries in `obs_dims`.                                                                                                                                    |
+| `_FEATURES_NDIMS`           | Number of dimensions in the features tensor.                                                                                                                                                                                                           |
+| `_FEATURES_SIZE`            | Total number of elements in the features tensor.                                                                                                                                                                                                       |
 
 Function Pointers
 -----------------
