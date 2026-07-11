@@ -239,9 +239,9 @@ int main_blackjack(int argc, char* argv[]) {
 	if (status >= 0)
 		return status;
 
-	uint64_t state[BLACKJACK_STATE_SIZE]         = { 0 };
-	uint64_t actions[BLACKJACK_MAX_NUM_ACTIONS]  = { 0 };
-	char state_output[BLACKJACK_STRING_BUF_SIZE] = { 0 };
+	uint64_t state[BJ_STATE_SIZE]         = { 0 };
+	uint64_t actions[BJ_MAX_NUM_ACTIONS]  = { 0 };
+	char state_output[BJ_STRING_BUF_SIZE] = { 0 };
 	uint64_t rng[4];
 
 	seed_rng(rng);
@@ -250,7 +250,7 @@ int main_blackjack(int argc, char* argv[]) {
 
 	game->init(NULL, state);
 
-	game->to_string(state, BLACKJACK_STRING_BUF_SIZE, state_output);
+	game->to_string(state, BJ_STRING_BUF_SIZE, state_output);
 	printf("\n%s\n", state_output);
 
 	uint64_t chance_draws = 0;
@@ -276,7 +276,7 @@ int main_blackjack(int argc, char* argv[]) {
 				       "A23456789T"[action]);
 			game->apply_action(state, action);
 
-			game->to_string(state, BLACKJACK_STRING_BUF_SIZE,
+			game->to_string(state, BJ_STRING_BUF_SIZE,
 			                state_output);
 			printf("\n%s\n", state_output);
 			continue;
@@ -304,18 +304,18 @@ int main_blackjack(int argc, char* argv[]) {
 
 		game->apply_action(state, move);
 
-		if (move == BLACKJACK_ACTION_SPLIT)
+		if (move == BJ_ACTION_SPLIT)
 			hands_played++;
 
-		game->to_string(state, BLACKJACK_STRING_BUF_SIZE, state_output);
+		game->to_string(state, BJ_STRING_BUF_SIZE, state_output);
 		printf("\n%s\n", state_output);
 	}
 
-	int64_t scores[BLACKJACK_NUM_PLAYERS];
+	int64_t scores[BJ_NUM_PLAYERS];
 	game->get_outcome(state, scores);
 
 	const long long score = (long long)scores[0];
-	const long long unit  = BLACKJACK_SCORE_UNITS_PER_BET;
+	const long long unit  = BJ_SCORE_UNITS_PER_BET;
 
 	if (score == 0 && hands_played > 1)
 		printf("Final score: +0 bets (broke even across %" PRIu64

@@ -12,9 +12,9 @@
  * 	[13]:       dealer hard total (aces counted as 1)
  * 	[14]:       dealer ace count
  * 	[15]:       dealer card count
- * 	[16]:       number of player hands (1..BLACKJACK_MAX_HANDS)
+ * 	[16]:       number of player hands (1..BJ_MAX_HANDS)
  * 	[17]:       index of the hand currently being played
- * 	[18..]:     BLACKJACK_MAX_HANDS hand records of 6 words each:
+ * 	[18..]:     BJ_MAX_HANDS hand records of 6 words each:
  * 	                [card1, card2, hard total, ace count, card count, flags]
  *
  * Card encoding: ranks 0..9 = A,2,3,4,5,6,7,8,9,T. Stored card fields hold
@@ -71,14 +71,14 @@
 #define PHASE_DONE             7 // terminal
 
 /**
- * The deck "player" is assigned the index BLACKJACK_NUM_PLAYERS. When
+ * The deck "player" is assigned the index BJ_NUM_PLAYERS. When
  * get_current_player() returns this value, the caller is responsible for
  * sampling one of the actions returned by get_valid_actions() uniformly at
  * random and passing it to apply_action(). The action array contains one entry
  * per remaining physical card, so a uniform sample is exactly a
  * draw-without-replacement from the shoe.
  */
-#define BLACKJACK_DECK_PLAYER BLACKJACK_NUM_PLAYERS
+#define BJ_DECK_PLAYER BJ_NUM_PLAYERS
 
 #define RANK_ACE 0
 #define RANK_TEN 9
@@ -93,7 +93,7 @@ static inline const uint64_t* hand_cptr(const uint64_t state[], uint64_t h) {
 
 /* Hard value of a rank (aces count as 1) */
 static inline uint64_t rank_value(uint64_t rank) {
-	assert(rank < BLACKJACK_NUM_RANKS);
+	assert(rank < BJ_NUM_RANKS);
 
 	return rank + 1;
 }
@@ -112,7 +112,7 @@ static inline bool hand_is_bust(const uint64_t* hand) {
 	return hand[HAND_TOTAL] > 21;
 }
 
-// A natural blackjack: 21 with the original two cards of an unsplit hand
+// A natural blackjack: 21 with the original two cards of an "unsplit" hand
 static inline bool is_natural_blackjack(const uint64_t state[]) {
 	const uint64_t* hand = hand_cptr(state, 0);
 
@@ -137,7 +137,7 @@ static inline bool dealer_must_hit(const uint64_t state[]) {
 	if (total < 17)
 		return true;
 
-#if BLACKJACK_DEALER_HITS_SOFT_17
+#if BJ_DEALER_HITS_SOFT_17
 	/* Soft 17: a promoted ace is in play (best != hard total) */
 	if (total == 17 && total != state[STATE_OFFSET_DEALER_TOTAL])
 		return true;
@@ -177,7 +177,7 @@ static void add_card_to_dealers_hand(uint64_t state[], uint64_t rank) {
 }
 
 static void draw_from_shoe(uint64_t state[], uint64_t rank) {
-	assert(rank < BLACKJACK_NUM_RANKS);
+	assert(rank < BJ_NUM_RANKS);
 	assert(state[STATE_OFFSET_SHOE + rank] > 0);
 
 	state[STATE_OFFSET_SHOE + rank]--;
@@ -235,12 +235,12 @@ static void finish_hand_and_advance(uint64_t state[]) {
 static void blackjack_init(const void* config, uint64_t state[]) {
 	(void)config; // Unused
 
-	for (size_t i = 0; i < BLACKJACK_STATE_SIZE; i++)
+	for (size_t i = 0; i < BJ_STATE_SIZE; i++)
 		state[i] = 0;
 
-	for (uint64_t r = 0; r < BLACKJACK_NUM_RANKS; r++)
+	for (uint64_t r = 0; r < BJ_NUM_RANKS; r++)
 		state[STATE_OFFSET_SHOE + r] =
-		        (r == RANK_TEN ? 16 : 4) * BLACKJACK_NUM_DECKS;
+		        (r == RANK_TEN ? 16 : 4) * BJ_NUM_DECKS;
 
 	state[STATE_OFFSET_NUM_HANDS] = 1;
 	state[STATE_OFFSET_PHASE]     = PHASE_DEAL_PLAYER_1;
@@ -254,7 +254,7 @@ static bool blackjack_is_chance_node(const uint64_t state[]) {
 
 static uint64_t blackjack_get_current_player(const uint64_t state[]) {
 	if (blackjack_is_chance_node(state))
-		return BLACKJACK_DECK_PLAYER;
+		return BJ_DECK_PLAYER;
 
 	return 0;
 }
@@ -272,7 +272,7 @@ static uint64_t blackjack_get_valid_actions(const uint64_t state[],
 		 */
 		uint64_t n = 0;
 
-		for (uint64_t r = 0; r < BLACKJACK_NUM_RANKS; r++)
+		for (uint64_t r = 0; r < BJ_NUM_RANKS; r++)
 			for (uint64_t c = 0; c < state[STATE_OFFSET_SHOE + r];
 			     c++)
 				actions_out[n++] = r;
@@ -285,21 +285,21 @@ static uint64_t blackjack_get_valid_actions(const uint64_t state[],
 	const uint64_t* hand = hand_cptr(state, state[STATE_OFFSET_CUR_HAND]);
 	uint64_t n           = 0;
 
-	actions_out[n++] = BLACKJACK_ACTION_STAND;
-	actions_out[n++] = BLACKJACK_ACTION_HIT;
+	actions_out[n++] = BJ_ACTION_STAND;
+	actions_out[n++] = BJ_ACTION_HIT;
 
 	// Double down: only on a two-card hand (allowed after splits)
 	if (hand[HAND_NCARDS] == 2)
-		actions_out[n++] = BLACKJACK_ACTION_DOUBLE;
+		actions_out[n++] = BJ_ACTION_DOUBLE;
 
 	/**
-	 * Split: equal-rank pair, up to BLACKJACK_MAX_HANDS hands.
+	 * Split: equal-rank pair, up to BJ_MAX_HANDS hands.
 	 * (Split aces never reach a decision node, so re-splitting aces is
 	 * implicitly impossible.)
 	 */
 	if (hand[HAND_NCARDS] == 2 && hand[HAND_CARD1] == hand[HAND_CARD2] &&
-	    state[STATE_OFFSET_NUM_HANDS] < BLACKJACK_MAX_HANDS)
-		actions_out[n++] = BLACKJACK_ACTION_SPLIT;
+	    state[STATE_OFFSET_NUM_HANDS] < BJ_MAX_HANDS)
+		actions_out[n++] = BJ_ACTION_SPLIT;
 
 	/**
 	 * Late surrender: only as the very first decision of the round.
@@ -309,7 +309,7 @@ static uint64_t blackjack_get_valid_actions(const uint64_t state[],
 	 */
 	if (state[STATE_OFFSET_NUM_HANDS] == 1 && hand[HAND_NCARDS] == 2 &&
 	    (hand[HAND_FLAGS] & HAND_FLAG_SPLIT) == 0)
-		actions_out[n++] = BLACKJACK_ACTION_SURRENDER;
+		actions_out[n++] = BJ_ACTION_SURRENDER;
 
 	return n;
 }
@@ -398,25 +398,25 @@ static void apply_decision_action(uint64_t state[], uint64_t action) {
 	uint64_t* hand = hand_ptr(state, state[STATE_OFFSET_CUR_HAND]);
 
 	switch (action) {
-	case BLACKJACK_ACTION_STAND:
+	case BJ_ACTION_STAND:
 		finish_hand_and_advance(state);
 		return;
 
-	case BLACKJACK_ACTION_HIT:
+	case BJ_ACTION_HIT:
 		state[STATE_OFFSET_PHASE] = PHASE_PLAYER_DRAW;
 		return;
 
-	case BLACKJACK_ACTION_DOUBLE:
+	case BJ_ACTION_DOUBLE:
 		assert(hand[HAND_NCARDS] == 2);
 
 		hand[HAND_FLAGS] |= HAND_FLAG_DOUBLED;
 		state[STATE_OFFSET_PHASE] = PHASE_PLAYER_DRAW;
 		return;
 
-	case BLACKJACK_ACTION_SPLIT: {
+	case BJ_ACTION_SPLIT: {
 		assert(hand[HAND_NCARDS] == 2);
 		assert(hand[HAND_CARD1] == hand[HAND_CARD2]);
-		assert(state[STATE_OFFSET_NUM_HANDS] < BLACKJACK_MAX_HANDS);
+		assert(state[STATE_OFFSET_NUM_HANDS] < BJ_MAX_HANDS);
 
 		uint64_t* new_hand =
 		        hand_ptr(state, state[STATE_OFFSET_NUM_HANDS]);
@@ -448,7 +448,7 @@ static void apply_decision_action(uint64_t state[], uint64_t action) {
 		return;
 	}
 
-	case BLACKJACK_ACTION_SURRENDER:
+	case BJ_ACTION_SURRENDER:
 		assert(state[STATE_OFFSET_NUM_HANDS] == 1);
 		assert(hand[HAND_NCARDS] == 2);
 
@@ -478,7 +478,7 @@ static bool blackjack_is_terminal(const uint64_t state[]) {
 }
 
 /**
- * Scores are integers in units of 1/BLACKJACK_SCORE_UNITS_PER_BET of a bet -
+ * Scores are integers in units of 1/BJ_SCORE_UNITS_PER_BET of a bet -
  * see blackjack.h for the caller-facing contract. The payout table below is
  * derived from that constant so the ratios live in exactly one place:
  *
@@ -492,7 +492,7 @@ static void blackjack_get_outcome(const uint64_t state[],
                                   int64_t scores_out[]) {
 	assert(blackjack_is_terminal(state));
 
-	const int64_t bet     = BLACKJACK_SCORE_UNITS_PER_BET;
+	const int64_t bet     = BJ_SCORE_UNITS_PER_BET;
 	const int64_t natural = 3 * bet / 2;
 
 	const bool dealer_bj   = dealer_is_blackjack(state);
@@ -540,7 +540,7 @@ static void blackjack_get_outcome(const uint64_t state[],
 
 static void blackjack_get_observation(const uint64_t state[], uint64_t player,
                                       uint8_t* obs_out) {
-	assert(player < BLACKJACK_NUM_PLAYERS);
+	assert(player < BJ_NUM_PLAYERS);
 	(void)player; // Single player; the shoe is omitted (see blackjack.h)
 
 	size_t i = 0;
@@ -562,19 +562,19 @@ static void blackjack_get_observation(const uint64_t state[], uint64_t player,
 	obs_out[i++] = (uint8_t)state[STATE_OFFSET_NUM_HANDS];
 	obs_out[i++] = (uint8_t)state[STATE_OFFSET_CUR_HAND];
 
-	for (uint64_t h = 0; h < BLACKJACK_MAX_HANDS; h++) {
+	for (uint64_t h = 0; h < BJ_MAX_HANDS; h++) {
 		const uint64_t* hand = hand_cptr(state, h);
 
 		for (size_t f = 0; f < HAND_NUM_WORDS; f++)
 			obs_out[i++] = (uint8_t)hand[f];
 	}
 
-	assert(i == BLACKJACK_OBS_SIZE);
+	assert(i == BJ_OBS_SIZE);
 }
 
 static void blackjack_get_features(const uint64_t state[], uint64_t player,
                                    float* features_out) {
-	assert(player < BLACKJACK_NUM_PLAYERS);
+	assert(player < BJ_NUM_PLAYERS);
 	(void)player;
 
 	size_t i = 0;
@@ -601,12 +601,12 @@ static void blackjack_get_features(const uint64_t state[], uint64_t player,
 		features_out[i++] = 0.0f; // card count
 	}
 
-	features_out[i++] = (float)state[STATE_OFFSET_NUM_HANDS] /
-	                    (float)BLACKJACK_MAX_HANDS;
-	features_out[i++] = (float)state[STATE_OFFSET_CUR_HAND] /
-	                    (float)BLACKJACK_MAX_HANDS;
+	features_out[i++] =
+	        (float)state[STATE_OFFSET_NUM_HANDS] / (float)BJ_MAX_HANDS;
+	features_out[i++] =
+	        (float)state[STATE_OFFSET_CUR_HAND] / (float)BJ_MAX_HANDS;
 
-	for (uint64_t h = 0; h < BLACKJACK_MAX_HANDS; h++) {
+	for (uint64_t h = 0; h < BJ_MAX_HANDS; h++) {
 		const uint64_t* hand = hand_cptr(state, h);
 		const uint64_t hard  = hand[HAND_TOTAL];
 		const uint64_t best  = hand_best_total(hand);
@@ -627,7 +627,7 @@ static void blackjack_get_features(const uint64_t state[], uint64_t player,
 		        (hand[HAND_FLAGS] & HAND_FLAG_FINISHED) ? 1.0f : 0.0f;
 	}
 
-	assert(i == BLACKJACK_FEATURES_SIZE);
+	assert(i == BJ_FEATURES_SIZE);
 }
 
 static char rank_char(uint64_t card) {
@@ -654,7 +654,7 @@ static void advance(char** buf, size_t* remaining, int n) {
 static uint64_t blackjack_to_string(const uint64_t state[], uint64_t buf_size,
                                     char* buf) {
 	assert(buf != NULL);
-	assert(buf_size >= BLACKJACK_STRING_BUF_SIZE);
+	assert(buf_size >= BJ_STRING_BUF_SIZE);
 
 	char* const start = buf;
 	size_t remaining  = (size_t)buf_size;
@@ -756,7 +756,7 @@ static const char* blackjack_help_prompt(void) {
 	       "  4 SURRENDER: forfeit half the stake (first decision of\n"
 	       "               the round only)\n"
 	       "\n"
-#if BLACKJACK_DEALER_HITS_SOFT_17
+#if BJ_DEALER_HITS_SOFT_17
 	       "The dealer hits soft 17 and pays 3:2 on a natural.\n"
 #else
 	       "The dealer stands on all 17s and pays 3:2 on a natural.\n"
@@ -787,6 +787,6 @@ const Game blackjack = {
 	.get_features       = blackjack_get_features,
 	.to_string          = blackjack_to_string,
 	.help_prompt        = blackjack_help_prompt,
-	.obs_dims           = { BLACKJACK_OBS_SIZE },
-	.features_dims      = { BLACKJACK_FEATURES_SIZE },
+	.obs_dims           = { BJ_OBS_SIZE },
+	.features_dims      = { BJ_FEATURES_SIZE },
 };
