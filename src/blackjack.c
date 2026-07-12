@@ -84,10 +84,14 @@
 #define RANK_TEN 9
 
 static inline uint64_t* hand_ptr(uint64_t state[], uint64_t h) {
+	assert(h < BJ_MAX_HANDS);
+
 	return &state[STATE_OFFSET_HANDS + h * HAND_NUM_WORDS];
 }
 
 static inline const uint64_t* hand_cptr(const uint64_t state[], uint64_t h) {
+	assert(h < BJ_MAX_HANDS);
+
 	return &state[STATE_OFFSET_HANDS + h * HAND_NUM_WORDS];
 }
 
@@ -215,6 +219,8 @@ static void enter_dealer_phase(uint64_t state[]) {
  * PHASE_PLAYER_DRAW), or hands over to the dealer when none remain.
  */
 static void finish_hand_and_advance(uint64_t state[]) {
+	assert(state[STATE_OFFSET_CUR_HAND] < state[STATE_OFFSET_NUM_HANDS]);
+
 	hand_ptr(state, state[STATE_OFFSET_CUR_HAND])[HAND_FLAGS] |=
 	        HAND_FLAG_FINISHED;
 
@@ -278,6 +284,7 @@ static uint64_t blackjack_get_valid_actions(const uint64_t state[],
 				actions_out[n++] = r;
 
 		assert(n > 0);
+		assert(n <= BJ_MAX_NUM_ACTIONS);
 		return n;
 	}
 

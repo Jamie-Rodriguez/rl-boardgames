@@ -74,7 +74,11 @@ static uint64_t ttt_get_valid_actions(const uint64_t state[],
 	return action_count;
 }
 
+// Forward-declaration so that ttt_apply_action() can use ttt_is_terminal()
+static bool ttt_is_terminal(const uint64_t state[]);
+
 static void ttt_apply_action(uint64_t state[], uint64_t action) {
+	assert(!ttt_is_terminal(state));
 	assert(action < TTT_BOARD_SIZE);
 
 	ttt_bitboard occupied = 0;

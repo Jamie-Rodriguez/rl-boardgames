@@ -80,7 +80,12 @@ static inline uint64_t pig_next_player(uint64_t player) {
 	return (player + 1) % PIG_NUM_PLAYERS;
 }
 
+// Forward-declaration so that pig_apply_action() can use pig_is_terminal()
+static bool pig_is_terminal(const uint64_t state[]);
+
 static void pig_apply_action(uint64_t state[], uint64_t action) {
+	assert(!pig_is_terminal(state));
+
 	const uint64_t player = state[STATE_OFFSET_TURN_PLAYER];
 	assert(player < PIG_NUM_PLAYERS);
 
