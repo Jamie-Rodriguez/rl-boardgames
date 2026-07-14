@@ -1,6 +1,6 @@
+#include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
-#include <stdint.h>
 #include <stdio.h>
 #include "connect4.h"
 

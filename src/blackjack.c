@@ -1,5 +1,5 @@
-#include <stddef.h>
 #include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 #include "blackjack.h"
 

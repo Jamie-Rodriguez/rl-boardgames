@@ -4,6 +4,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include "board_game.h"
 #include "prng.h"
 #include "tic_tac_toe.h"
 #include "pig.h"
