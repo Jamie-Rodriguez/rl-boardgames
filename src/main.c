@@ -10,6 +10,7 @@
 #include "pig.h"
 #include "blackjack.h"
 #include "connect4.h"
+#include "checkers.h"
 
 static int handle_args(int argc, char* argv[], const Game* game) {
 	if (argc <= 1)
@@ -380,10 +381,61 @@ int main_connect4(int argc, char* argv[]) {
 	return 0;
 }
 
+static const char* const checkers_dir_names[] = { "UL", "UR", "DL", "DR" };
+
+int main_checkers(int argc, char* argv[]) {
+	const Game* game = &checkers;
+
+	const int status = handle_args(argc, argv, game);
+	if (status >= 0)
+		return status;
+
+	uint64_t state[CHECKERS_STATE_SIZE]         = { 0 };
+	uint64_t actions[CHECKERS_MAX_NUM_ACTIONS]  = { 0 };
+	char state_output[CHECKERS_STRING_BUF_SIZE] = { 0 };
+
+	printf("%s\n", game->help_prompt());
+
+	game->init(NULL, state);
+
+	game->to_string(state, CHECKERS_STRING_BUF_SIZE, state_output);
+	printf("\n%s\n", state_output);
+
+	// Checkers is fully deterministic: no chance nodes, no PRNG
+	while (!game->is_terminal(state)) {
+		uint64_t num_actions = game->get_valid_actions(state, actions);
+		uint64_t current_player = game->get_current_player(state);
+
+		// Actions encode square * 4 + direction; decode for humans
+		printf("Player %" PRIu64 "'s turn. Valid moves:",
+		       current_player + 1);
+		for (uint64_t i = 0; i < num_actions; i++)
+			printf(" %" PRIu64 " (sq %" PRIu64 " %s)", actions[i],
+			       actions[i] / 4,
+			       checkers_dir_names[actions[i] % 4]);
+		printf("\n");
+
+		uint64_t move;
+		if (!read_move(actions, num_actions, &move))
+			return 1;
+
+		game->apply_action(state, move);
+
+		game->to_string(state, CHECKERS_STRING_BUF_SIZE, state_output);
+		printf("\n%s\n", state_output);
+	}
+
+	int64_t scores[CHECKERS_NUM_PLAYERS];
+	game->get_outcome(state, scores);
+	print_scores_and_winner(scores, CHECKERS_NUM_PLAYERS);
+
+	return 0;
+}
+
 int main(int argc, char* argv[]) {
 	/**
 	 * Switch the demoed game by calling the relevant main_<GAME>()
 	 * function here
 	 */
-	return main_blackjack(argc, argv);
+	return main_checkers(argc, argv);
 }

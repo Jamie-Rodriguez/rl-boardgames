@@ -3,19 +3,19 @@ This repo contains a collection of board games, written in C (C99 and built usin
 Available Games
 ===============
 
-| Game                              | Tic-Tac-Toe | Pig | Blackjack | Connect-4 |
-|-----------------------------------|:-----------:|:---:|:---------:|:---------:|
-| Number of Players                 |      2      |  2  |     1     |     2     |
-| State Size                        |      3      |  5  |     42    |     3     |
-| Max Actions                       |      9      |  6  |    312†   |     7     |
-| Max Decision Actions              |      9      |  2  |     5     |     7     |
-| Max Chance Actions                |      0      |  6  |    312†   |     0     |
-| Observation: Number of Dimensions |      3      |  1  |     1     |     3     |
-| Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   | [2, 6, 7] |
-| Observation: Size                 |      18     |  3  |     31    |     84    |
-| Features: Number of Dimensions    |      3      |  1  |     1     |     3     |
-| Features: Dimensions              |  [2, 3, 3]  | [3] |    [25]   | [2, 6, 7] |
-| Features: Size                    |      18     |  3  |     25    |     84    |
+| Game                              | Tic-Tac-Toe | Pig | Blackjack | Connect-4 | Checkers  |
+|-----------------------------------|:-----------:|:---:|:---------:|:---------:|:---------:|
+| Number of Players                 |      2      |  2  |     1     |     2     |     2     |
+| State Size                        |      3      |  5  |     42    |     3     |     6     |
+| Max Actions                       |      9      |  6  |    312†   |     7     |     48    |
+| Max Decision Actions              |      9      |  2  |     5     |     7     |     48    |
+| Max Chance Actions                |      0      |  6  |    312†   |     0     |     0     |
+| Observation: Number of Dimensions |      3      |  1  |     1     |     3     |     3     |
+| Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   | [2, 6, 7] | [6, 8, 8] |
+| Observation: Size                 |      18     |  3  |     31    |     84    |    384    |
+| Features: Number of Dimensions    |      3      |  1  |     1     |     3     |     3     |
+| Features: Dimensions              |  [2, 3, 3]  | [3] |    [25]   | [2, 6, 7] | [6, 8, 8] |
+| Features: Size                    |      18     |  3  |     25    |     84    |    384    |
 
 **Note:** Each game also defines a `STRING_BUF_SIZE` macro.
 
