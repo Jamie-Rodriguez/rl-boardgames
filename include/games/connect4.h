@@ -1,7 +1,7 @@
 #ifndef CONNECT4_H
 #define CONNECT4_H
 
-#include "board_game.h"
+#include "games/board_game.h"
 
 #define C4_NUM_PLAYERS 2
 #define C4_NUM_ROWS    6

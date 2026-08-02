@@ -45,13 +45,22 @@ endif
 CODEGEN_SRCS   = $(wildcard $(CODEGENDIR)/generate_*.c)
 GENERATED_HDRS = $(patsubst $(CODEGENDIR)/generate_%.c,$(BUILDDIR)/%.h,$(CODEGEN_SRCS))
 
-LIB_SRCS  = $(filter-out $(SRCDIR)/main.c, $(wildcard $(SRCDIR)/*.c))
+# Library sources are the shared top-level sources plus every per-module
+# subdirectory of src/ (add new modules here); src/main.c is the demo entry
+# point and stays out of the library
+SRC_MODULES = games agents
+
+LIB_SRCS  = $(filter-out $(SRCDIR)/main.c, $(wildcard $(SRCDIR)/*.c)) \
+            $(foreach module,$(SRC_MODULES),$(wildcard $(SRCDIR)/$(module)/*.c))
 LIB_OBJS  = $(LIB_SRCS:$(SRCDIR)/%.c=$(BUILDDIR)/%.o)
 LIB_DEPS  = $(LIB_OBJS:.o=.d)
 
 MAIN_SRC  = $(SRCDIR)/main.c
 MAIN_OBJ  = $(BUILDDIR)/main.o
 MAIN_DEP  = $(BUILDDIR)/main.d
+
+# Object files mirror the src/ layout, so build/ needs the same subdirectories
+OBJ_DIRS  = $(sort $(BUILDDIR) $(patsubst %/,%,$(dir $(LIB_OBJS) $(MAIN_OBJ))))
 
 STATIC_LIB = $(BINDIR)/$(LIB_NAME)_lib.a
 EXECUTABLE = $(BINDIR)/$(BIN_NAME)
@@ -73,7 +82,7 @@ $(STATIC_LIB): $(LIB_OBJS) | $(BINDIR)
 $(EXECUTABLE): $(MAIN_OBJ) $(STATIC_LIB) | $(BINDIR)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(MAIN_OBJ) $(STATIC_LIB)
 
-$(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(BUILDDIR)
+$(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(OBJ_DIRS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # ── Codegen rules (convention: codegen/generate_foo.c → build/foo.h) ─────────
@@ -89,10 +98,10 @@ $(BUILDDIR)/%.h: $(BUILDDIR)/generate_%
 $(BUILDDIR)/generate_ttt_zobrist_hashes: $(SRCDIR)/prng.c
 
 # ── Per-file codegen dependencies (one line each) ────────────────────────────
-$(BUILDDIR)/tic_tac_toe.o: $(BUILDDIR)/ttt_has_win_bit_array.h
-$(BUILDDIR)/tic_tac_toe.o: $(BUILDDIR)/ttt_zobrist_hashes.h
+$(BUILDDIR)/games/tic_tac_toe.o: $(BUILDDIR)/ttt_has_win_bit_array.h
+$(BUILDDIR)/games/tic_tac_toe.o: $(BUILDDIR)/ttt_zobrist_hashes.h
 
-$(BUILDDIR) $(BINDIR):
+$(OBJ_DIRS) $(BINDIR):
 	mkdir -p $@
 
 -include $(LIB_DEPS) $(MAIN_DEP)

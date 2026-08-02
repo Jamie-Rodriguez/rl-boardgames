@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <assert.h>
 #include <stdio.h>
-#include "pig.h"
+#include "games/pig.h"
 
 /**
  * `state` layout:

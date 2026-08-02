@@ -1,7 +1,7 @@
 #ifndef CHECKERS_H
 #define CHECKERS_H
 
-#include "board_game.h"
+#include "games/board_game.h"
 
 /**
  * English draughts/American checkers, classically on an 8×8 board:

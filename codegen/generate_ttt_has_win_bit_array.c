@@ -1,6 +1,6 @@
 #include <stddef.h>
 #include <stdio.h>
-#include "tic_tac_toe.h"
+#include "games/tic_tac_toe.h"
 
 // 2^9 = 0x200 possible states for a player's pieces
 #define NUM_STATES 0x200

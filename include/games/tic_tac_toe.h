@@ -1,7 +1,7 @@
 #ifndef TIC_TAC_TOE_H
 #define TIC_TAC_TOE_H
 
-#include "board_game.h"
+#include "games/board_game.h"
 
 #define TTT_NUM_PLAYERS 2
 #define TTT_NUM_ROWS    3

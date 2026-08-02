@@ -1,7 +1,7 @@
 #ifndef BLACKJACK_H
 #define BLACKJACK_H
 
-#include "board_game.h"
+#include "games/board_game.h"
 
 /**
  * Number of 52-card decks in the shoe. Classic casino blackjack is dealt from

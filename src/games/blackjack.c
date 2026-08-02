@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "blackjack.h"
+#include "games/blackjack.h"
 
 /**
  * State layout:
