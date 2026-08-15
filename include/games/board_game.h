@@ -30,6 +30,23 @@
  * 	- <NAMESPACE>_MAX_NUM_CHANCE_ACTIONS
  * 		Maximum actions returned at a *chance* node
  * 		(0 for deterministic games).
+ * 	- <NAMESPACE>_ACTION_SPACE_SIZE
+ * 		Size of the fixed decision-action ID space.
+ * 		At least MAX_NUM_DECISION_ACTIONS; exactly equal to it
+ * 		for games with densely-numbered actions; larger where
+ * 		the encoding factorises moves (e.g. square * dirs + dir)
+ * 		and leaves dead indices.
+ * 		Fixed-width agents (Q-table rows, policy heads) size
+ * 		per-state action storage with this.
+ * 	- <NAMESPACE>_MAX_TURNS
+ * 		Maximum number of decision plies (turns), summed across
+ * 		all seats. UINT64_MAX if the game allows no finite bound.
+ * 	- <NAMESPACE>_STATE_SPACE_SIZE
+ * 		Number of distinct reachable states: exact where known,
+ * 		otherwise a documented upper bound, saturating at
+ * 		UINT64_MAX where the count exceeds (or cannot be shown
+ * 		to fit) a uint64. Tabular and enumeration methods size
+ * 		their storage with this.
  * 	- <NAMESPACE>_STRING_BUF_SIZE
  * 		Minimum buffer size (including null terminator) that the
  * 		caller must allocate for `to_string()`.

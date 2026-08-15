@@ -120,6 +120,26 @@
 #define BJ_MAX_NUM_CHANCE_ACTIONS BJ_SHOE_SIZE
 #define BJ_MAX_NUM_ACTIONS        BJ_MAX_NUM_CHANCE_ACTIONS
 
+/* Decision IDs 0..4 (STAND..SURRENDER) are dense */
+#define BJ_ACTION_SPACE_SIZE BJ_MAX_NUM_DECISION_ACTIONS
+
+/**
+ * Loose bound on player decisions per round: a live hand can grow to
+ * at most 21 cards (all aces) before it must stand or bust, so no
+ * hand takes more than ~22 decisions (its hits, its final action and
+ * the split that created it), across at most BJ_MAX_HANDS hands.
+ */
+#define BJ_MAX_TURNS (22 * BJ_MAX_HANDS)
+
+/**
+ * The shoe composition alone admits (4 * BJ_NUM_DECKS + 1)^9 *
+ * (16 * BJ_NUM_DECKS + 1) ~ 4 * 10^14 states with the default
+ * six-deck shoe; combined with the hand records the count exceeds
+ * what a uint64 can hold, so this saturates per the convention in
+ * board_game.h.
+ */
+#define BJ_STATE_SPACE_SIZE UINT64_MAX
+
 /**
  * Observation: flat uint8 vector, from the player's perspective. The dealer's
  * hole card is *not* observable while face down: the hole-card/dealer-total

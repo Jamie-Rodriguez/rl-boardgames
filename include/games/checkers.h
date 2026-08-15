@@ -19,8 +19,8 @@
  * 	  even mid-jump-sequence as per the classic English rule
  * 	- a player with no legal move loses
  * 	- 80 consecutive plies/moves without a capture or a man move ends the
- * 	  game as a draw (bounds episode length; see DRAW_PLIES in
- * 	  src/checkers.c)
+ * 	  game as a draw (bounds episode length; see CHECKERS_DRAW_PLIES and
+ * 	  CHECKERS_MAX_TURNS below)
  * 	- the state, actions and observations all use the side to move's
  * 	  frame: the board is stored rotated so the mover always advances
  * 	  towards the top row (see the state layout below)
@@ -84,6 +84,37 @@
 #define CHECKERS_MAX_NUM_DECISION_ACTIONS (CHECKERS_NUM_MEN * CHECKERS_NUM_DIRS)
 #define CHECKERS_MAX_NUM_CHANCE_ACTIONS   0
 #define CHECKERS_MAX_NUM_ACTIONS          CHECKERS_MAX_NUM_DECISION_ACTIONS
+
+/**
+ * Actions are expressed as from_square * NUM_DIRS + direction over every board
+ * square - so the decision-action ID space is larger than the count of
+ * simultaneously-legal moves; IDs that never occur (light squares) are dead
+ * indices
+ */
+#define CHECKERS_ACTION_SPACE_SIZE (CHECKERS_NUM_SQUARES * CHECKERS_NUM_DIRS)
+
+// Plies without a capture or a man move before the game is drawn
+#define CHECKERS_DRAW_PLIES 80
+
+/**
+ * Loose episode bound via the draw rule: every ply either advances a
+ * man (each of the 2 * NUM_MEN men has at most NUM_ROWS - 1 forward
+ * moves), captures (at most 2 * NUM_MEN pieces), or counts towards
+ * the CHECKERS_DRAW_PLIES quiet-ply budget that ends the game.
+ */
+#define CHECKERS_MAX_IRREVERSIBLE_PLIES                   \
+	(2 * CHECKERS_NUM_MEN * (CHECKERS_NUM_ROWS - 1) + \
+	 2 * CHECKERS_NUM_MEN)
+#define CHECKERS_MAX_TURNS                                             \
+	((CHECKERS_MAX_IRREVERSIBLE_PLIES + 1) * CHECKERS_DRAW_PLIES + \
+	 CHECKERS_MAX_IRREVERSIBLE_PLIES)
+
+/**
+ * 8x8 draughts has ~5 * 10^20 reachable positions (Schaeffer et al.'s
+ * enumeration), which is beyond what a uint64 can count, so this saturates
+ * per the convention in board_game.h.
+ */
+#define CHECKERS_STATE_SPACE_SIZE UINT64_MAX
 
 /**
  * Observation: six board-sized planes (row-major, row 0 first) in the
