@@ -120,6 +120,7 @@ $(BUILDDIR)/generate_ttt_board_to_index: $(SRCDIR)/games/tic_tac_toe.c
 $(BUILDDIR)/generate_ttt_board_to_index: $(BUILDDIR)/ttt_has_win_bit_array.h
 
 # ── Per-file codegen dependencies (one line each) ────────────────────────────
+$(BUILDDIR)/games/three_mens_morris.o: $(BUILDDIR)/tmm_has_win_bit_array.h
 $(BUILDDIR)/games/tic_tac_toe.o: $(BUILDDIR)/ttt_has_win_bit_array.h
 $(BUILDDIR)/games/tic_tac_toe.o: $(BUILDDIR)/ttt_zobrist_hashes.h
 $(BUILDDIR)/agents/board_index.o: $(BUILDDIR)/ttt_board_to_index.h
