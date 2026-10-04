@@ -40,9 +40,9 @@ static void ttt_init(const void* config, uint64_t state[]) {
 	// Initialise state
 	state[STATE_OFFSET_CURRENT_PLAYER] = 0;
 
-	for (size_t i = STATE_OFFSET_BOARD;
-	     i < STATE_OFFSET_BOARD + TTT_NUM_PLAYERS; i++)
-		state[i] = 0; // Empty bitboard
+	for (size_t p = STATE_OFFSET_BOARD;
+	     p < STATE_OFFSET_BOARD + TTT_NUM_PLAYERS; p++)
+		state[p] = 0; // Empty bitboard
 }
 
 static uint64_t ttt_get_current_player(const uint64_t state[]) {
@@ -95,11 +95,6 @@ static void ttt_apply_action(uint64_t state[], uint64_t action) {
 	state[STATE_OFFSET_CURRENT_PLAYER] = (player + 1) % TTT_NUM_PLAYERS;
 }
 
-static inline bool ttt_check_win(ttt_bitboard b) {
-	assert(b <= FULL_BOARD);
-	return (has_win_bits[b >> 6] >> (b & 63)) & 1;
-}
-
 static bool ttt_is_terminal(const uint64_t state[]) {
 	// Check for a winning streak
 	for (size_t player = 0; player < TTT_NUM_PLAYERS; player++)
@@ -137,8 +132,8 @@ static void ttt_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 	}
 
 	// No winner/draw
-	for (size_t p = 0; p < TTT_NUM_PLAYERS; p++)
-		scores_out[p] = 0;
+	for (size_t player = 0; player < TTT_NUM_PLAYERS; player++)
+		scores_out[player] = 0;
 }
 
 
