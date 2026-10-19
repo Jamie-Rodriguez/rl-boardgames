@@ -188,8 +188,10 @@ static void c4_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 }
 
 static void c4_get_observation(const uint64_t state[], uint64_t player,
-                               uint8_t* obs_out) {
+                               uint64_t* obs_out) {
+	assert(state != NULL);
 	assert(player < C4_NUM_PLAYERS);
+	assert(obs_out != NULL);
 
 	size_t i = 0;
 
@@ -199,7 +201,7 @@ static void c4_get_observation(const uint64_t state[], uint64_t player,
 
 		for (uint64_t r = 0; r < C4_NUM_ROWS; r++)
 			for (uint64_t c = 0; c < C4_NUM_COLS; c++)
-				obs_out[i++] = (uint8_t)((board >>
+				obs_out[i++] = (uint64_t)((board >>
 				                          (c * COL_BITS + r)) &
 				                         1);
 	}
@@ -211,11 +213,11 @@ static void c4_get_features(const uint64_t state[], uint64_t player,
                             float* features_out) {
 	assert(player < C4_NUM_PLAYERS);
 
-	uint8_t obs[C4_OBS_SIZE];
+	uint64_t obs[C4_OBS_SIZE];
 
 	c4_get_observation(state, player, obs);
 
-	for (size_t i = 0; i < C4_OBS_SIZE; i++)
+	for (size_t i = 0; i < C4_FEATURES_SIZE; i++)
 		features_out[i] = (float)obs[i];
 }
 
@@ -297,6 +299,6 @@ const Game connect4 = {
 	.get_features       = c4_get_features,
 	.to_string          = c4_to_string,
 	.help_prompt        = c4_help_prompt,
-	.obs_dims           = { C4_NUM_PLAYERS, C4_NUM_ROWS, C4_NUM_COLS },
+	.obs_dims           = { C4_OBS_SIZE },
 	.features_dims      = { C4_NUM_PLAYERS, C4_NUM_ROWS, C4_NUM_COLS },
 };

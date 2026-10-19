@@ -8,4 +8,7 @@
 #define STATIC_ASSERT(expr, name) \
 	typedef char static_assert_##name[(expr) ? 1 : -1]
 
+#define STRINGIFY_IMPL(x) #x
+#define STRINGIFY(x) STRINGIFY_IMPL(x)
+
 #endif /* UTILS_H */

@@ -34,17 +34,15 @@
 #define C4_STATE_SPACE_SIZE UINT64_C(4531985219092)
 
 /**
- * Observation: two 6x7 binary planes, from the observing player's
- * perspective, row-major with row 0 (the bottom row) first:
- * 	plane 0: the observing player's stones
- * 	plane 1: the opponent's stones
+ * Observation: two row-major board blocks (observer first). Each square is
+ * 0 = empty or 1 = occupied; row 0 (the bottom row) comes first.
  */
-#define C4_OBS_NDIMS 3
+#define C4_OBS_NDIMS 1
 #define C4_OBS_SIZE  (C4_NUM_PLAYERS * C4_NUM_ROWS * C4_NUM_COLS)
 
-// Features: identical shape to the observation, as 0.0/1.0 floats
-#define C4_FEATURES_NDIMS C4_OBS_NDIMS
-#define C4_FEATURES_SIZE  C4_OBS_SIZE
+/* Features: two binary occupancy planes, observer first, shape { 2, 6, 7 }. */
+#define C4_FEATURES_NDIMS 3
+#define C4_FEATURES_SIZE  (C4_NUM_PLAYERS * C4_NUM_ROWS * C4_NUM_COLS)
 
 /**
  * String buffer size:

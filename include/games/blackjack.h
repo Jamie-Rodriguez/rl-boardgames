@@ -95,6 +95,7 @@
  */
 #define HAND_NUM_WORDS 6
 
+/** See `STATE_OFFSET_*` in `blackjack.c for details */
 #define BJ_STATE_SIZE (18 + HAND_NUM_WORDS * BJ_MAX_HANDS)
 
 /**
@@ -141,40 +142,45 @@
 #define BJ_STATE_SPACE_SIZE UINT64_MAX
 
 /**
- * Observation: flat uint8 vector, from the player's perspective. The dealer's
- * hole card is *not* observable while face down: the hole-card/dealer-total
- * entries read 0 until the dealer's hand is revealed (dealer's turn onwards).
- *
- * 	[0]:      dealer upcard (rank + 1, 0 if not yet dealt)
- * 	[1]:      dealer hole card (rank + 1, 0 until revealed)
- * 	[2]:      dealer hard total (0 until revealed)
- * 	[3]:      dealer ace count (0 until revealed)
- * 	[4]:      dealer card count (0 until revealed)
- * 	[5]:      number of player hands
- * 	[6]:      index of the hand currently being played
- * 	[7..]:    per hand (6 values * BJ_MAX_HANDS):
- * 	              [card1, card2, hard total, ace count, card count, flags]
+ * Observation: flat uint64 vector, from the player's perspective at one of
+ * their decisions.
  */
+#define BJ_OBS_DEALER_UP_OFFSET 0 // dealer upcard (rank + 1)
+#define BJ_OBS_CUR_HAND_OFFSET  1 // index of the hand currently being played
+#define BJ_OBS_HANDS_OFFSET     2 // first hand's block
+
+/* Note: These are offset from the start of the specific hand's block */
+#define BJ_OBS_HAND_CARD1      0 // rank + 1
+#define BJ_OBS_HAND_CARD2      1 // rank + 1
+#define BJ_OBS_HAND_HARD_TOTAL 2 // aces count as 1
+#define BJ_OBS_HAND_ACES       3
+#define BJ_OBS_HAND_NCARDS     4
+#define BJ_OBS_HAND_DOUBLED    5 // 1 if doubled down, else 0
+#define BJ_OBS_HAND_NUM_FIELDS (BJ_OBS_HAND_DOUBLED + 1)
+
 #define BJ_OBS_NDIMS 1
-#define BJ_OBS_SIZE  (7 + HAND_NUM_WORDS * BJ_MAX_HANDS)
+#define BJ_OBS_SIZE \
+	(BJ_OBS_HANDS_OFFSET + BJ_OBS_HAND_NUM_FIELDS * BJ_MAX_HANDS)
 
 /**
- * Features: flat float vector, normalised to [0, 1]. Ratios that can exceed 1
+ * Features: flat float vector, normalised to [0, 1], with the same layout as
+ * the observation. Ratios that can exceed 1
  * in rare states (bust totals, many-card hands) are clamped.
- * Dealer-hand entries read 0 until the hole card is revealed (dealer's turn
- * onwards).
- *
- * 	[0]:      dealer upcard value / 11 (ace = 11), 0 if not dealt
- * 	[1]:      dealer best total / 21 (0 until revealed, clamped)
- * 	[2]:      dealer card count / 8 (0 until revealed, clamped)
- * 	[3]:      num hands / BJ_MAX_HANDS
- * 	[4]:      current hand index / BJ_MAX_HANDS
- * 	[5..]:    per hand (5 values * BJ_MAX_HANDS):
- * 	              [best total / 21, is soft, card count / 8,
- * 	               doubled, finished]
  */
+#define BJ_FEATURES_DEALER_UP_OFFSET 0 // dealer upcard value / 11 (ace = 11)
+#define BJ_FEATURES_CUR_HAND_OFFSET  1 // current hand index / BJ_MAX_HANDS
+#define BJ_FEATURES_HANDS_OFFSET     2 // first hand's block
+
+/* Note: These are offset from the start of the specific hand's block */
+#define BJ_FEATURES_HAND_BEST_TOTAL 0 // best total / 21
+#define BJ_FEATURES_HAND_SOFT       1 // 1 if an ace counts as 11, else 0
+#define BJ_FEATURES_HAND_NCARDS     2 // card count / 8
+#define BJ_FEATURES_HAND_DOUBLED    3 // 1 if doubled down, else 0
+#define BJ_FEATURES_HAND_NUM_FIELDS (BJ_FEATURES_HAND_DOUBLED + 1)
+
 #define BJ_FEATURES_NDIMS 1
-#define BJ_FEATURES_SIZE  (5 + 5 * BJ_MAX_HANDS)
+#define BJ_FEATURES_SIZE \
+	(BJ_FEATURES_HANDS_OFFSET + BJ_FEATURES_HAND_NUM_FIELDS * BJ_MAX_HANDS)
 
 /**
  * String buffer size: phase line + dealer line + one line per hand + null

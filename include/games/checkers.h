@@ -11,7 +11,7 @@
  * 	- captures jump over an adjacent enemy piece onto the empty square
  * 	  beyond, and are MANDATORY: if any capture exists, *only captures are
  * 	  legal*
- * 	- multi-jumps are modelled as sequential actions: after a jump that
+ * 	- multi-jumps are modeled as sequential actions: after a jump that
  * 	  can be continued by the same piece, the same player moves again and
  * 	  get_valid_actions() returns only that piece's follow-up jump(s)
  * 	  (see `state[5]`)
@@ -21,15 +21,14 @@
  * 	- 80 consecutive plies/moves without a capture or a man move ends the
  * 	  game as a draw (bounds episode length; see CHECKERS_DRAW_PLIES and
  * 	  CHECKERS_MAX_TURNS below)
- * 	- the state, actions and observations all use the side to move's
- * 	  frame: the board is stored rotated so the mover always advances
- * 	  towards the top row (see the state layout below)
+ * 	- state, actions, observations and features all use the side to move's
+ * 	  perspective; only to_string() shows a fixed board, player 1's frame.
  */
 
 #define CHECKERS_NUM_PLAYERS 2
 
 /**
- * If CHECKERS_NUM_ROWS * CHECKERS_NUM_COLS > 64, the uint64_t bitboards
+ * If CHECKERS_NUM_ROWS × CHECKERS_NUM_COLS > 64, the uint64_t bitboards
  * (and with them the state layout) will have to be re-worked.
  */
 #define CHECKERS_NUM_ROWS 8
@@ -54,7 +53,7 @@
  * When the turn passes, every bitboard is rotated 180 degrees and the two piece
  * slots swap.
  *
- * Bitboard layout: bit index = row * 8 + column, row 0 at the bottom of the
+ * Bitboard layout: bit index = row × 8 + column, row 0 at the bottom of the
  * mover's view.
  */
 #define CHECKERS_STATE_SIZE (CHECKERS_NUM_PLAYERS + 4)
@@ -63,7 +62,7 @@
  * Actions are expressed in the side to move's (canonical) frame and encode
  * (from-square, direction) as:
  *
- * 	action = from_square * CHECKERS_NUM_DIRS + direction
+ * 	action = from_square × CHECKERS_NUM_DIRS + direction
  *
  * where from_square is the piece's bit index in the canonical bitboards and
  * direction is:
@@ -86,7 +85,7 @@
 #define CHECKERS_MAX_NUM_ACTIONS          CHECKERS_MAX_NUM_DECISION_ACTIONS
 
 /**
- * Actions are expressed as from_square * NUM_DIRS + direction over every board
+ * Actions are expressed as from_square × NUM_DIRS + direction over every board
  * square - so the decision-action ID space is larger than the count of
  * simultaneously-legal moves; IDs that never occur (light squares) are dead
  * indices
@@ -98,53 +97,55 @@
 
 /**
  * Loose episode bound via the draw rule: every ply either advances a
- * man (each of the 2 * NUM_MEN men has at most NUM_ROWS - 1 forward
- * moves), captures (at most 2 * NUM_MEN pieces), or counts towards
+ * man (each of the 2 × NUM_MEN men has at most NUM_ROWS - 1 forward
+ * moves), captures (at most 2 × NUM_MEN pieces), or counts towards
  * the CHECKERS_DRAW_PLIES quiet-ply budget that ends the game.
  */
-#define CHECKERS_MAX_IRREVERSIBLE_PLIES                   \
-	(2 * CHECKERS_NUM_MEN * (CHECKERS_NUM_ROWS - 1) + \
-	 2 * CHECKERS_NUM_MEN)
+#define CHECKERS_MAX_IRREVERSIBLE_PLIES \
+	(2 * CHECKERS_NUM_MEN * (CHECKERS_NUM_ROWS - 1) + 2 * CHECKERS_NUM_MEN)
 #define CHECKERS_MAX_TURNS                                             \
 	((CHECKERS_MAX_IRREVERSIBLE_PLIES + 1) * CHECKERS_DRAW_PLIES + \
 	 CHECKERS_MAX_IRREVERSIBLE_PLIES)
 
 /**
- * 8x8 draughts has ~5 * 10^20 reachable positions (Schaeffer et al.'s
+ * 8×8 draughts has ~5 × 10^20 reachable positions (Schaeffer et al.'s
  * enumeration), which is beyond what a uint64 can count, so this saturates
  * per the convention in board_game.h.
  */
 #define CHECKERS_STATE_SPACE_SIZE UINT64_MAX
 
 /**
- * Observation: six board-sized planes (row-major, row 0 first) in the
- * observing player's frame - the observer's men always advance towards the top
- * row. Planes 0-4 are binary; plane 5 holds counts:
+ * Observation: two row-major, flattened board lists from the mover's
+ * perspective (mover-first), followed by two scalar fields.
  *
- * 	plane 0: the observing player's men
- * 	plane 1: the observing player's kings
- * 	plane 2: the opponent's men
- * 	plane 3: the opponent's kings
- * 	plane 4: the piece that must continue jumping (all zero unless a
- * 	         multi-jump is in progress; always the mover's piece)
- * 	plane 5: the quiet-ply counter, broadcast to every cell (raw count)
- *
- * The state is stored relative to the side to move's perspective i.e. both
- * seats therefore see themselves playing "up", and identical strategic
- * situations produce identical observations regardless of seat.
+ * 	[0..63]:    mover's board: 0 = empty, 1 = man, 2 = king
+ * 	[64..127]:  opponent's board, with the same piece codes
+ * 	[128]:      square that must continue jumping, or 64 when none
+ * 	[129]:      raw quiet-ply counter
  */
-// Men + kings planes per player, then continuation + counter
-#define CHECKERS_OBS_PLANES (2 * CHECKERS_NUM_PLAYERS + 2)
+#define CHECKERS_OBS_EMPTY           0
+#define CHECKERS_OBS_MAN             1
+#define CHECKERS_OBS_KING            2
+#define CHECKERS_OBS_NO_CONTINUATION CHECKERS_NUM_SQUARES
 
-#define CHECKERS_OBS_NDIMS 3
-#define CHECKERS_OBS_SIZE  (CHECKERS_OBS_PLANES * CHECKERS_NUM_SQUARES)
+#define CHECKERS_OBS_CONTINUATION_OFFSET \
+	(CHECKERS_NUM_PLAYERS * CHECKERS_NUM_SQUARES)
+#define CHECKERS_OBS_QUIET_PLIES_OFFSET (CHECKERS_OBS_CONTINUATION_OFFSET + 1)
+
+#define CHECKERS_OBS_NDIMS 1
+#define CHECKERS_OBS_SIZE  (CHECKERS_OBS_QUIET_PLIES_OFFSET + 1)
 
 /**
- * Features: same planes as observations as floats; the counter plane is
- * divided by the draw budget so every value lies in [0, 1]
+ * Features: six planes in the same mover-relative coordinates:
+ * 	0: mover's men; 1: mover's kings
+ * 	2: opponent's men; 3: opponent's kings
+ * 	4: continuation square (one-hot; all zero when none)
+ * 	5: quiet-ply counter / CHECKERS_DRAW_PLIES, broadcast to every cell
  */
-#define CHECKERS_FEATURES_NDIMS CHECKERS_OBS_NDIMS
-#define CHECKERS_FEATURES_SIZE  CHECKERS_OBS_SIZE
+#define CHECKERS_FEATURES_PLANES (2 * CHECKERS_NUM_PLAYERS + 2)
+
+#define CHECKERS_FEATURES_NDIMS 3
+#define CHECKERS_FEATURES_SIZE (CHECKERS_FEATURES_PLANES * CHECKERS_NUM_SQUARES)
 
 /**
  * String buffer size: turn/status lines + board rows + column footer +

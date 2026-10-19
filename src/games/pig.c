@@ -142,16 +142,18 @@ static void pig_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 }
 
 static void pig_get_observation(const uint64_t state[], uint64_t player,
-                                uint8_t* obs_out) {
+                                uint64_t* obs_out) {
+	assert(state != NULL);
 	assert(player < PIG_NUM_PLAYERS);
+	assert(obs_out != NULL);
 
 	// Scores rotated so the requesting player is first
 	for (size_t i = 0; i < PIG_NUM_PLAYERS; i++) {
 		const uint64_t p = (player + i) % PIG_NUM_PLAYERS;
-		obs_out[i]       = (uint8_t)state[STATE_OFFSET_SCORES + p];
+		obs_out[i]       = state[STATE_OFFSET_SCORES + p];
 	}
 
-	obs_out[PIG_NUM_PLAYERS] = (uint8_t)state[STATE_OFFSET_TURN_TOTAL];
+	obs_out[PIG_NUM_PLAYERS] = state[STATE_OFFSET_TURN_TOTAL];
 }
 
 static void pig_get_features(const uint64_t state[], uint64_t player,

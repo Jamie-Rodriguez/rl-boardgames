@@ -41,13 +41,15 @@
 #define TTT_STATE_SPACE_SIZE 5478
 
 /**
- * Note `observation` shape is the same as the `features` shape for this
- * tic-tac-toe implementation
+ * Observation: two row-major board blocks (observer first). Each square is
+ * 0 = empty or 1 = occupied.
  */
-#define TTT_OBS_NDIMS      3
-#define TTT_OBS_SIZE       (TTT_NUM_PLAYERS * TTT_NUM_ROWS * TTT_NUM_COLS)
-#define TTT_FEATURES_NDIMS TTT_OBS_NDIMS
-#define TTT_FEATURES_SIZE  TTT_OBS_SIZE
+#define TTT_OBS_NDIMS 1
+#define TTT_OBS_SIZE  (TTT_NUM_PLAYERS * TTT_BOARD_SIZE)
+
+/* Features: two binary occupancy planes, observer first, shape { 2, 3, 3 }. */
+#define TTT_FEATURES_NDIMS 3
+#define TTT_FEATURES_SIZE  (TTT_NUM_PLAYERS * TTT_BOARD_SIZE)
 
 // Intermediate variables to make calculating `TTT_STRING_BUF_SIZE` easier
 #define TURN_STR_MAX 32

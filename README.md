@@ -13,12 +13,12 @@ Available Games
 | Action Space Size                 |      9      |  2  |     5     |     7     |    256    |         90         |
 | Max Turns                         |      9      | ∞ ‡ |    88§    |     42    |  15,632§  |        ∞ ‡         |
 | State Space Size                  |    5,478    | ∞ ‡ |    ∞ ‡    | 4.5×10¹²  |    ∞ ‡    |       5,710§       |
-| Observation: Number of Dimensions |      3      |  1  |     1     |     3     |     3     |         1          |
-| Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   | [2, 6, 7] | [6, 8, 8] |        [20]        |
-| Observation: Size                 |      18     |  3  |     31    |     84    |    384    |         20         |
+| Observation: Number of Dimensions |      1      |  1  |     1     |     1     |     1     |         1          |
+| Observation: Dimensions           |    [18]     | [3] |    [26]   |   [84]    |   [130]   |        [18]        |
+| Observation: Size                 |      18     |  3  |     26    |     84    |    130    |         18         |
 | Features: Number of Dimensions    |      3      |  1  |     1     |     3     |     3     |         3          |
-| Features: Dimensions              |  [2, 3, 3]  | [3] |    [25]   | [2, 6, 7] | [6, 8, 8] |     [4, 3, 3]      |
-| Features: Size                    |      18     |  3  |     25    |     84    |    384    |         36         |
+| Features: Dimensions              |  [2, 3, 3]  | [3] |    [18]   | [2, 6, 7] | [6, 8, 8] |     [2, 3, 3]      |
+| Features: Size                    |      18     |  3  |     18    |     84    |    384    |         18         |
 
 **Note:** Each game also defines a `STRING_BUF_SIZE` macro.
 
@@ -139,7 +139,7 @@ Function Pointers
 | `apply_action`       | `void (uint64_t state[], uint64_t action)`                            | Mutate `state` in-place by applying `action`.                                                                                                                                                              |
 | `is_terminal`        | `bool (const uint64_t state[])`                                       | Return `true` if the game is over (win, loss, or draw).                                                                                                                                                    |
 | `get_outcome`        | `void (const uint64_t state[], int64_t scores_out[])`                 | Write per-player scores into `scores_out` (e.g. +1 win, -1 loss, 0 draw). Games may use scaled integer units - see Blackjack's half-bet scores. Only meaningful when terminal.                             |
-| `get_observation`    | `void (const uint64_t state[], uint64_t player, uint8_t* obs_out)`    | Encode the `state` as a discrete observation tensor from player's perspective.                                                                                                                             |
+| `get_observation`    | `void (const uint64_t state[], uint64_t player, uint64_t* obs_out)`    | Encode the `state` as a discrete observation tensor from player's perspective.                                                                                                                             |
 | `get_features`       | `void (const uint64_t state[], uint64_t player, float* features_out)` | Encode the `state` as a floating-point feature tensor from `player`'s perspective, suitable for neural network input.                                                                                      |
 | `to_string`          | `uint64_t (const uint64_t state[], uint64_t buf_size, char* buf)`     | Write a human-readable representation of the state into `buf`. Returns the number of bytes written.                                                                                                        |
 | `help_prompt`        | `const char* (void)`                                                  | Return a static string describing the game's rules and move format.                                                                                                                                        |
@@ -149,17 +149,17 @@ Static Fields
 
 |        Field       |      Type     |                                                   Description                                                  |
 |:------------------:|:-------------:|:--------------------------------------------------------------------------------------------------------------:|
-| `obs_dims`      | `uint64_t[4]` | Shape of the observation tensor. Only the first `OBS_NDIMS` entries are meaningful (e.g. `{2, 3, 3}` for TTT). |
+| `obs_dims`      | `uint64_t[4]` | Shape of the observation tensor. Only the first `OBS_NDIMS` entries are meaningful (e.g. `{18}` for TTT). |
 | `features_dims` | `uint64_t[4]` | Shape of the features tensor. Only the first `FEATURES_NDIMS` entries are meaningful.                          |
 
 Observation vs Features
 -----------------------
 
-Both `get_observation()` and `get_features()` encode the game state from a given player's perspective, but they serve different purposes:
+Both `get_observation()` and `get_features()` encode the game state from the perspective of the player to move at a decision node, but they serve different purposes.
 
-- **Observation** (`uint8_t*`) - A semantically faithful, discrete/integer encoding of the game state. This is the "ground truth" representation i.e. each element maps precisely to a meaningful game concept. Useful for rule-based agents, debugging, and inspection.
+- **Observation** (`uint64_t*`) - A semantically faithful, discrete/integer encoding of the game state. This is the "ground truth" representation i.e. each element maps precisely to a meaningful game concept. Useful for rule-based agents, debugging, and inspection.
 
-- **Features** (`float*`) - A float encoding optimised for neural network consumption. This may normalise values, broadcast scalars across spatial dimensions, or apply other transformations beyond a simple cast of the observation. Note: A simple game (like Tic-Tac-Toe) may produce identical representation, but more complex games will diverge.
+- **Features** (`float*`) - A float encoding optimised for neural network consumption. This may normalise values, broadcast scalars across spatial dimensions, or apply other transformations beyond a simple cast of the observation. Note: A simple game may produce the same values in both (e.g. Tic-Tac-Toe's features are its flat observation reshaped into `[2, 3, 3]` planes), but more complex games will diverge.
 
 Memory Conventions
 ------------------
@@ -170,7 +170,7 @@ All memory is **caller-allocated**. The `Game` functions never allocate or free 
 uint64_t state[STATE_SIZE];
 uint64_t actions[MAX_NUM_ACTIONS];
 int64_t  scores[NUM_PLAYERS];
-uint8_t  observation[OBS_SIZE];
+uint64_t observation[OBS_SIZE];
 float    features[FEATURES_SIZE];
 char     string_buffer[STRING_BUF_SIZE];
 ```

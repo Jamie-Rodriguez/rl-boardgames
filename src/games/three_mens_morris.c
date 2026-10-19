@@ -13,9 +13,6 @@
 #define STATE_OFFSET_CURRENT_PLAYER 1
 #define STATE_OFFSET_BOARD          2
 
-#define OBS_OFFSET_PHASE          (TMM_NUM_PLAYERS * TMM_BOARD_SIZE)
-#define OBS_OFFSET_CURRENT_PLAYER (OBS_OFFSET_PHASE + 1)
-
 #define PHASE_PLACEMENT 0
 #define PHASE_MOVEMENT  1
 
@@ -259,7 +256,7 @@ static void tmm_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 }
 
 static void tmm_get_observation(const uint64_t state[], uint64_t player,
-                                uint8_t* obs_out) {
+                                uint64_t* obs_out) {
 	assert_state_is_valid(state);
 	assert(player < TMM_NUM_PLAYERS);
 	assert(obs_out != NULL);
@@ -271,32 +268,19 @@ static void tmm_get_observation(const uint64_t state[], uint64_t player,
 
 		for (size_t sq = 0; sq < TMM_BOARD_SIZE; sq++)
 			obs_out[p * TMM_BOARD_SIZE + sq] =
-			        (uint8_t)((board >> sq) & 1U);
+			        (uint64_t)((board >> sq) & 1U);
 	}
-
-	obs_out[OBS_OFFSET_PHASE] = (uint8_t)state[STATE_OFFSET_PHASE];
-	obs_out[OBS_OFFSET_CURRENT_PLAYER] =
-	        (uint8_t)((state[STATE_OFFSET_CURRENT_PLAYER] +
-		           TMM_NUM_PLAYERS - player) %
-		          TMM_NUM_PLAYERS);
 }
 
 static void tmm_get_features(const uint64_t state[], uint64_t player,
                              float* features_out) {
 	assert(features_out != NULL);
 
-	uint8_t obs[TMM_OBS_SIZE];
+	uint64_t obs[TMM_OBS_SIZE];
 	tmm_get_observation(state, player, obs);
 
-	for (size_t i = 0; i < TMM_NUM_PLAYERS * TMM_BOARD_SIZE; i++)
+	for (size_t i = 0; i < TMM_FEATURES_SIZE; i++)
 		features_out[i] = (float)obs[i];
-
-	for (size_t sq = 0; sq < TMM_BOARD_SIZE; sq++) {
-		features_out[TMM_NUM_PLAYERS * TMM_BOARD_SIZE + sq] =
-		        (float)obs[OBS_OFFSET_PHASE];
-		features_out[(TMM_NUM_PLAYERS + 1) * TMM_BOARD_SIZE + sq] =
-		        (float)obs[OBS_OFFSET_CURRENT_PLAYER];
-	}
 }
 
 static uint64_t tmm_to_string(const uint64_t state[], uint64_t buf_size,
