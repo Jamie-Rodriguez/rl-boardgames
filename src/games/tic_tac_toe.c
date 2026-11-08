@@ -34,7 +34,8 @@
 
 static const char player_to_piece[] = { ' ', 'O', 'X' };
 
-static void ttt_init(const void* config, uint64_t state[]) {
+static void ttt_init(const void* config,
+                     uint64_t state[static TTT_STATE_SIZE]) {
 	(void)config; // Unused
 
 	// Initialise state
@@ -45,17 +46,19 @@ static void ttt_init(const void* config, uint64_t state[]) {
 		state[p] = 0; // Empty bitboard
 }
 
-static uint64_t ttt_get_current_player(const uint64_t state[]) {
+static uint64_t
+ttt_get_current_player(const uint64_t state[static TTT_STATE_SIZE]) {
 	return state[STATE_OFFSET_CURRENT_PLAYER];
 }
 
-static bool ttt_is_chance_node(const uint64_t state[]) {
+static bool ttt_is_chance_node(const uint64_t state[static TTT_STATE_SIZE]) {
 	(void)state;
 	return false;
 }
 
-static uint64_t ttt_get_valid_actions(const uint64_t state[],
-                                      uint64_t actions_out[]) {
+static uint64_t
+ttt_get_valid_actions(const uint64_t state[static TTT_STATE_SIZE],
+                      uint64_t actions_out[static TTT_MAX_NUM_ACTIONS]) {
 	ttt_bitboard occupied = 0;
 
 	for (size_t p = 0; p < TTT_NUM_PLAYERS; p++)
@@ -74,9 +77,10 @@ static uint64_t ttt_get_valid_actions(const uint64_t state[],
 }
 
 // Forward-declaration so that ttt_apply_action() can use ttt_is_terminal()
-static bool ttt_is_terminal(const uint64_t state[]);
+static bool ttt_is_terminal(const uint64_t state[static TTT_STATE_SIZE]);
 
-static void ttt_apply_action(uint64_t state[], uint64_t action) {
+static void ttt_apply_action(uint64_t state[static TTT_STATE_SIZE],
+                             uint64_t action) {
 	assert(!ttt_is_terminal(state));
 	assert(action < TTT_BOARD_SIZE);
 
@@ -95,7 +99,7 @@ static void ttt_apply_action(uint64_t state[], uint64_t action) {
 	state[STATE_OFFSET_CURRENT_PLAYER] = (player + 1) % TTT_NUM_PLAYERS;
 }
 
-static bool ttt_is_terminal(const uint64_t state[]) {
+static bool ttt_is_terminal(const uint64_t state[static TTT_STATE_SIZE]) {
 	// Check for a winning streak
 	for (size_t player = 0; player < TTT_NUM_PLAYERS; player++)
 		if (ttt_check_win(
@@ -116,7 +120,8 @@ static bool ttt_is_terminal(const uint64_t state[]) {
 }
 
 
-static void ttt_get_outcome(const uint64_t state[], int64_t scores_out[]) {
+static void ttt_get_outcome(const uint64_t state[static TTT_STATE_SIZE],
+                            int64_t scores_out[static TTT_NUM_PLAYERS]) {
 	assert(ttt_is_terminal(state));
 
 	for (size_t player = 0; player < TTT_NUM_PLAYERS; player++) {
@@ -137,11 +142,10 @@ static void ttt_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 }
 
 
-static void ttt_get_observation(const uint64_t state[], uint64_t player,
-                                uint64_t* obs_out) {
-	assert(state != NULL);
+static void ttt_get_observation(const uint64_t state[static TTT_STATE_SIZE],
+                                uint64_t player,
+                                uint64_t obs_out[static TTT_OBS_SIZE]) {
 	assert(player < TTT_NUM_PLAYERS);
-	assert(obs_out != NULL);
 
 	for (size_t p = 0; p < TTT_NUM_PLAYERS; p++) {
 		uint64_t board_player = (player + p) % TTT_NUM_PLAYERS;
@@ -153,8 +157,9 @@ static void ttt_get_observation(const uint64_t state[], uint64_t player,
 	}
 }
 
-static void ttt_get_features(const uint64_t state[], uint64_t player,
-                             float* features_out) {
+static void ttt_get_features(const uint64_t state[static TTT_STATE_SIZE],
+                             uint64_t player,
+                             float features_out[static TTT_FEATURES_SIZE]) {
 	assert(player < TTT_NUM_PLAYERS);
 
 	uint64_t obs[TTT_OBS_SIZE];
@@ -164,7 +169,8 @@ static void ttt_get_features(const uint64_t state[], uint64_t player,
 		features_out[i] = (float)obs[i];
 }
 
-static inline char ttt_piece_at(const uint64_t state[], size_t square) {
+static inline char ttt_piece_at(const uint64_t state[static TTT_STATE_SIZE],
+                                size_t square) {
 	assert(square < TTT_BOARD_SIZE);
 
 	const ttt_bitboard square_bitmask = (ttt_bitboard)(1 << square);
@@ -177,9 +183,9 @@ static inline char ttt_piece_at(const uint64_t state[], size_t square) {
 	return player_to_piece[0];
 }
 
-static uint64_t ttt_to_string(const uint64_t state[], uint64_t buf_size,
-                              char* buf) {
-	assert(buf != NULL);
+static uint64_t ttt_to_string(const uint64_t state[static TTT_STATE_SIZE],
+                              uint64_t buf_size,
+                              char buf[static TTT_STRING_BUF_SIZE]) {
 	assert(buf_size >= TTT_STRING_BUF_SIZE);
 	assert(state[STATE_OFFSET_CURRENT_PLAYER] < TTT_NUM_PLAYERS);
 

@@ -16,6 +16,7 @@ ARFLAGS  = rcs
 
 CFLAGS_COMMON = -std=c99 -march=native \
                 -Wall -Wextra -Wpedantic -Wconversion \
+                -Wcast-qual -Wcast-align \
                 -Wno-incompatible-pointer-types-discards-qualifiers \
                 -Warray-bounds-pointer-arithmetic \
                 -ffunction-sections -fdata-sections \

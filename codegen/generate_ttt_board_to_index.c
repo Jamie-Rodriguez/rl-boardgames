@@ -72,9 +72,8 @@
 	 TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
 	 TTT_BOARD_INDEX_SQUARE_STATES)
 
-static inline uint64_t ttt_features_to_code(const float features[]) {
-	assert(features != NULL);
-
+static inline uint64_t
+ttt_features_to_code(const float features[static TTT_FEATURES_SIZE]) {
 	uint64_t code        = 0;
 	uint64_t place_value = 1;
 
@@ -101,9 +100,9 @@ static inline uint64_t ttt_features_to_code(const float features[]) {
 	return code;
 }
 
-static inline uint64_t ttt_afterstate_to_code(const float features[],
-                                              uint64_t action) {
-	assert(features != NULL);
+static inline uint64_t
+ttt_afterstate_to_code(const float features[static TTT_FEATURES_SIZE],
+                       uint64_t action) {
 	assert(action < TTT_BOARD_SIZE);
 
 	float afterstate[TTT_FEATURES_SIZE];
@@ -149,12 +148,13 @@ typedef enum StateExplorationStatus {
 	STATE_IN_PLAY  = 2,
 } StateExplorationStatus;
 
-static inline void push(Stack* stack, const uint64_t state[]) {
+static inline void push(Stack* stack,
+                        const uint64_t state[static TTT_STATE_SIZE]) {
 	assert(stack->size < STACK_CAPACITY);
 	memcpy(stack->states[stack->size++], state, sizeof(stack->states[0]));
 }
 
-static inline void pop(Stack* stack, uint64_t state[]) {
+static inline void pop(Stack* stack, uint64_t state[static TTT_STATE_SIZE]) {
 	assert(stack->size > 0);
 	memcpy(state, stack->states[--stack->size], sizeof(stack->states[0]));
 }
@@ -163,8 +163,9 @@ static inline void pop(Stack* stack, uint64_t state[]) {
  * Marks every code the game can reach in `statuses`, as "in-play" or
  * "terminal"; unreachable codes stay unseen
  */
-static void mark_reachable_codes(Stack* stack,
-                                 StateExplorationStatus statuses[]) {
+static void mark_reachable_codes(
+        Stack* stack,
+        StateExplorationStatus statuses[static TTT_BOARD_INDEX_NUM_CODES]) {
 	uint64_t state[TTT_STATE_SIZE];
 
 	tic_tac_toe.init(NULL, state);
@@ -223,8 +224,9 @@ static void mark_reachable_codes(Stack* stack,
 }
 
 /* f after g: the piece on square q lands on f[g[q]] */
-static inline void compose(const uint8_t f[], const uint8_t g[],
-                           uint8_t out[]) {
+static inline void compose(const uint8_t f[static TTT_BOARD_SIZE],
+                           const uint8_t g[static TTT_BOARD_SIZE],
+                           uint8_t out[static TTT_BOARD_SIZE]) {
 	for (size_t square = 0; square < TTT_BOARD_SIZE; square++)
 		out[square] = f[g[square]];
 }
@@ -233,9 +235,10 @@ static inline void compose(const uint8_t f[], const uint8_t g[],
  * Returns index of `mapping` among the symmetries
  * Returns `NUM_SYMMETRIES` if not in `symmetry_square`
  */
-static inline size_t
-get_symmetry(const uint8_t symmetry_square[][TTT_BOARD_SIZE],
-             const uint8_t mapping[]) {
+static inline size_t get_symmetry(
+        const uint8_t symmetry_square[static TTT_BOARD_INDEX_NUM_SYMMETRIES]
+                                     [TTT_BOARD_SIZE],
+        const uint8_t mapping[static TTT_BOARD_SIZE]) {
 	for (size_t s = 0; s < TTT_BOARD_INDEX_NUM_SYMMETRIES; s++)
 		if (memcmp(symmetry_square[s], mapping,
 		           sizeof(symmetry_square[s])) == 0)
@@ -251,7 +254,9 @@ get_symmetry(const uint8_t symmetry_square[][TTT_BOARD_SIZE],
  *
  * Symmetry 0 is the identity
  */
-static void build_symmetries(uint8_t symmetry_square[][TTT_BOARD_SIZE]) {
+static void
+build_symmetries(uint8_t symmetry_square[static TTT_BOARD_INDEX_NUM_SYMMETRIES]
+                                        [TTT_BOARD_SIZE]) {
 	uint8_t quarter_turn[TTT_BOARD_SIZE]; // (Anticlockwise)
 	uint8_t mirror[TTT_BOARD_SIZE];
 
@@ -321,7 +326,8 @@ static void build_symmetries(uint8_t symmetry_square[][TTT_BOARD_SIZE]) {
 	}
 }
 
-static void code_to_features(uint64_t code, float features[]) {
+static void code_to_features(uint64_t code,
+                             float features[static TTT_FEATURES_SIZE]) {
 	assert(code < TTT_BOARD_INDEX_NUM_CODES);
 
 	for (size_t square = 0; square < TTT_BOARD_SIZE; square++) {
@@ -336,8 +342,9 @@ static void code_to_features(uint64_t code, float features[]) {
 }
 
 /* Maps `features` to a new set of features, via `symmetry` */
-static void apply_symmetry(const float features[], const uint8_t symmetry[],
-                           float out[]) {
+static void apply_symmetry(const float features[static TTT_FEATURES_SIZE],
+                           const uint8_t symmetry[static TTT_BOARD_SIZE],
+                           float out[static TTT_FEATURES_SIZE]) {
 	for (size_t p = 0; p < TTT_NUM_PLAYERS; p++)
 		for (size_t square = 0; square < TTT_BOARD_SIZE; square++)
 			out[p * TTT_BOARD_SIZE + symmetry[square]] =
@@ -348,8 +355,10 @@ static void apply_symmetry(const float features[], const uint8_t symmetry[],
  * The canonical form of a position is the smallest code among its
  * images under the symmetries
  */
-static uint64_t
-canonical_code(uint64_t code, const uint8_t symmetry_square[][TTT_BOARD_SIZE]) {
+static uint64_t canonical_code(
+        uint64_t code,
+        const uint8_t symmetry_square[static TTT_BOARD_INDEX_NUM_SYMMETRIES]
+                                     [TTT_BOARD_SIZE]) {
 	float features[TTT_FEATURES_SIZE];
 	float transformed[TTT_FEATURES_SIZE];
 
@@ -379,10 +388,13 @@ canonical_code(uint64_t code, const uint8_t symmetry_square[][TTT_BOARD_SIZE]) {
  * one handed out. Each such code gets the index of its class in
  * `classes`
  */
-static uint64_t number_classes(const StateExplorationStatus statuses[],
-                               StateExplorationStatus status,
-                               const uint8_t symmetry_square[][TTT_BOARD_SIZE],
-                               uint16_t classes[], uint64_t first_index) {
+static uint64_t number_classes(
+        const StateExplorationStatus statuses[static TTT_BOARD_INDEX_NUM_CODES],
+        StateExplorationStatus status,
+        const uint8_t symmetry_square[static TTT_BOARD_INDEX_NUM_SYMMETRIES]
+                                     [TTT_BOARD_SIZE],
+        uint16_t classes[static TTT_BOARD_INDEX_NUM_CODES],
+        uint64_t first_index) {
 	uint64_t next_index = first_index;
 
 	for (uint64_t code = 0; code < TTT_BOARD_INDEX_NUM_CODES; code++) {
@@ -498,10 +510,9 @@ int main(void) {
 	       "generate_ttt_board_to_index\"\n");
 	printf("#endif\n\n");
 
-	printf("static inline uint64_t ttt_features_to_code(const float "
-	       "features[]) {\n");
-	printf("\tassert(features != NULL);\n");
-	printf("\n");
+	printf("static inline uint64_t\n");
+	printf("ttt_features_to_code(const float features[static "
+	       "TTT_FEATURES_SIZE]) {\n");
 	printf("\tuint64_t code        = 0;\n");
 	printf("\tuint64_t place_value = 1;\n");
 	printf("\n");
@@ -530,11 +541,10 @@ int main(void) {
 	printf("\treturn code;\n");
 	printf("}\n");
 	printf("\n");
-	printf("static inline uint64_t ttt_afterstate_to_code(const float "
-	       "features[],\n");
-	printf("                                              uint64_t action) "
-	       "{\n");
-	printf("\tassert(features != NULL);\n");
+	printf("static inline uint64_t\n");
+	printf("ttt_afterstate_to_code(const float features[static "
+	       "TTT_FEATURES_SIZE],\n");
+	printf("                       uint64_t action) {\n");
 	printf("\tassert(action < TTT_BOARD_SIZE);\n");
 	printf("\n");
 	printf("\tfloat afterstate[TTT_FEATURES_SIZE];\n");
@@ -599,10 +609,10 @@ int main(void) {
 
 	printf("};\n\n");
 
-	printf("static inline uint64_t ttt_afterstate_to_index(const float "
-	       "features[],\n");
-	printf("                                               uint64_t "
-	       "action) {\n");
+	printf("static inline uint64_t\n");
+	printf("ttt_afterstate_to_index(const float features[static "
+	       "TTT_FEATURES_SIZE],\n");
+	printf("                        uint64_t action) {\n");
 	printf("\tconst uint64_t index =\n");
 	printf("\t        ttt_board_to_index[ttt_afterstate_to_code(features, "
 	       "action)];\n");

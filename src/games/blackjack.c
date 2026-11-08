@@ -105,13 +105,15 @@
 #define RANK_ACE 0
 #define RANK_TEN 9
 
-static inline uint64_t* hand_ptr(uint64_t state[], uint64_t h) {
+static inline uint64_t* hand_ptr(uint64_t state[static BJ_STATE_SIZE],
+                                 uint64_t h) {
 	assert(h < BJ_MAX_HANDS);
 
 	return &state[STATE_OFFSET_HANDS + h * HAND_NUM_WORDS];
 }
 
-static inline const uint64_t* hand_cptr(const uint64_t state[], uint64_t h) {
+static inline const uint64_t*
+hand_cptr(const uint64_t state[static BJ_STATE_SIZE], uint64_t h) {
 	assert(h < BJ_MAX_HANDS);
 
 	return &state[STATE_OFFSET_HANDS + h * HAND_NUM_WORDS];
@@ -130,21 +132,23 @@ static inline uint64_t best_total(uint64_t hard_total, uint64_t num_aces) {
 	                                               : hard_total;
 }
 
-static inline uint64_t hand_best_total(const uint64_t* hand) {
+static inline uint64_t
+hand_best_total(const uint64_t hand[static HAND_NUM_WORDS]) {
 	return best_total(hand[HAND_TOTAL], hand[HAND_ACES]);
 }
 
-static inline bool hand_is_bust(const uint64_t* hand) {
+static inline bool hand_is_bust(const uint64_t hand[static HAND_NUM_WORDS]) {
 	return hand[HAND_TOTAL] > 21;
 }
 
 /* An equal-rank two-card pair, as splitting requires */
-static inline bool hand_is_pair(const uint64_t* hand) {
+static inline bool hand_is_pair(const uint64_t hand[static HAND_NUM_WORDS]) {
 	return hand[HAND_NCARDS] == 2 && hand[HAND_CARD1] == hand[HAND_CARD2];
 }
 
 // A natural blackjack: 21 with the original two cards of an "unsplit" hand
-static inline bool is_natural_blackjack(const uint64_t state[]) {
+static inline bool
+is_natural_blackjack(const uint64_t state[static BJ_STATE_SIZE]) {
 	const uint64_t* hand = hand_cptr(state, 0);
 
 	return state[STATE_OFFSET_NUM_HANDS] == 1 && hand[HAND_NCARDS] == 2 &&
@@ -152,17 +156,19 @@ static inline bool is_natural_blackjack(const uint64_t state[]) {
 	       hand_best_total(hand) == 21;
 }
 
-static inline uint64_t dealer_best_total(const uint64_t state[]) {
+static inline uint64_t
+dealer_best_total(const uint64_t state[static BJ_STATE_SIZE]) {
 	return best_total(state[STATE_OFFSET_DEALER_TOTAL],
 	                  state[STATE_OFFSET_DEALER_ACES]);
 }
 
-static inline bool dealer_is_blackjack(const uint64_t state[]) {
+static inline bool
+dealer_is_blackjack(const uint64_t state[static BJ_STATE_SIZE]) {
 	return state[STATE_OFFSET_DEALER_NCARDS] == 2 &&
 	       dealer_best_total(state) == 21;
 }
 
-static inline bool dealer_must_hit(const uint64_t state[]) {
+static inline bool dealer_must_hit(const uint64_t state[static BJ_STATE_SIZE]) {
 	const uint64_t total = dealer_best_total(state);
 
 	if (total < 17)
@@ -178,13 +184,15 @@ static inline bool dealer_must_hit(const uint64_t state[]) {
 }
 
 /* The dealer's hand is face up from the dealer's turn onwards */
-static inline bool dealer_hand_revealed(const uint64_t state[]) {
+static inline bool
+dealer_hand_revealed(const uint64_t state[static BJ_STATE_SIZE]) {
 	const uint64_t phase = state[STATE_OFFSET_PHASE];
 
 	return phase == PHASE_DEALER_DRAW || phase == PHASE_DONE;
 }
 
-static void add_card_to_hand(uint64_t* hand, uint64_t rank) {
+static void add_card_to_hand(uint64_t hand[static HAND_NUM_WORDS],
+                             uint64_t rank) {
 	hand[HAND_TOTAL] += rank_value(rank);
 
 	if (rank == RANK_ACE)
@@ -198,7 +206,8 @@ static void add_card_to_hand(uint64_t* hand, uint64_t rank) {
 	hand[HAND_NCARDS]++;
 }
 
-static void add_card_to_dealers_hand(uint64_t state[], uint64_t rank) {
+static void add_card_to_dealers_hand(uint64_t state[static BJ_STATE_SIZE],
+                                     uint64_t rank) {
 	state[STATE_OFFSET_DEALER_TOTAL] += rank_value(rank);
 
 	if (rank == RANK_ACE)
@@ -207,7 +216,8 @@ static void add_card_to_dealers_hand(uint64_t state[], uint64_t rank) {
 	state[STATE_OFFSET_DEALER_NCARDS]++;
 }
 
-static void draw_from_shoe(uint64_t state[], uint64_t rank) {
+static void draw_from_shoe(uint64_t state[static BJ_STATE_SIZE],
+                           uint64_t rank) {
 	assert(rank < NUM_RANKS);
 	assert(state[STATE_OFFSET_SHOE + rank] > 0);
 
@@ -218,7 +228,7 @@ static void draw_from_shoe(uint64_t state[], uint64_t rank) {
  * Called once the player phase is over (every hand finished). Decides whether
  * the dealer needs to draw, and otherwise ends the round.
  */
-static void enter_dealer_phase(uint64_t state[]) {
+static void enter_dealer_phase(uint64_t state[static BJ_STATE_SIZE]) {
 	bool any_hands_live = false;
 
 	for (uint64_t h = 0; h < state[STATE_OFFSET_NUM_HANDS]; h++) {
@@ -245,7 +255,7 @@ static void enter_dealer_phase(uint64_t state[]) {
  * freshly created by a split still owes its second card, hence
  * PHASE_PLAYER_DRAW), or hands over to the dealer when none remain.
  */
-static void finish_hand_and_advance(uint64_t state[]) {
+static void finish_hand_and_advance(uint64_t state[static BJ_STATE_SIZE]) {
 	assert(state[STATE_OFFSET_CUR_HAND] < state[STATE_OFFSET_NUM_HANDS]);
 
 	hand_ptr(state, state[STATE_OFFSET_CUR_HAND])[HAND_FLAGS] |=
@@ -265,7 +275,8 @@ static void finish_hand_and_advance(uint64_t state[]) {
 	enter_dealer_phase(state);
 }
 
-static void blackjack_init(const void* config, uint64_t state[]) {
+static void blackjack_init(const void* config,
+                           uint64_t state[static BJ_STATE_SIZE]) {
 	(void)config; // Unused
 
 	for (size_t i = 0; i < BJ_STATE_SIZE; i++)
@@ -279,21 +290,24 @@ static void blackjack_init(const void* config, uint64_t state[]) {
 	state[STATE_OFFSET_PHASE]     = PHASE_DEAL_PLAYER_1;
 }
 
-static bool blackjack_is_chance_node(const uint64_t state[]) {
+static bool
+blackjack_is_chance_node(const uint64_t state[static BJ_STATE_SIZE]) {
 	const uint64_t phase = state[STATE_OFFSET_PHASE];
 
 	return phase != PHASE_DECIDE && phase != PHASE_DONE;
 }
 
-static uint64_t blackjack_get_current_player(const uint64_t state[]) {
+static uint64_t
+blackjack_get_current_player(const uint64_t state[static BJ_STATE_SIZE]) {
 	if (blackjack_is_chance_node(state))
 		return BJ_DECK_PLAYER;
 
 	return 0;
 }
 
-static uint64_t blackjack_get_valid_actions(const uint64_t state[],
-                                            uint64_t actions_out[]) {
+static uint64_t
+blackjack_get_valid_actions(const uint64_t state[static BJ_STATE_SIZE],
+                            uint64_t actions_out[static BJ_MAX_NUM_ACTIONS]) {
 	if (state[STATE_OFFSET_PHASE] == PHASE_DONE)
 		return 0;
 
@@ -348,7 +362,8 @@ static uint64_t blackjack_get_valid_actions(const uint64_t state[],
 }
 
 /* Resolve a freshly drawn card rank according to the current phase */
-static void apply_chance_action(uint64_t state[], uint64_t rank) {
+static void apply_chance_action(uint64_t state[static BJ_STATE_SIZE],
+                                uint64_t rank) {
 	draw_from_shoe(state, rank);
 
 	switch (state[STATE_OFFSET_PHASE]) {
@@ -427,7 +442,8 @@ static void apply_chance_action(uint64_t state[], uint64_t rank) {
 	}
 }
 
-static void apply_decision_action(uint64_t state[], uint64_t action) {
+static void apply_decision_action(uint64_t state[static BJ_STATE_SIZE],
+                                  uint64_t action) {
 	uint64_t* hand = hand_ptr(state, state[STATE_OFFSET_CUR_HAND]);
 
 	switch (action) {
@@ -494,7 +510,8 @@ static void apply_decision_action(uint64_t state[], uint64_t action) {
 	}
 }
 
-static void blackjack_apply_action(uint64_t state[], uint64_t action) {
+static void blackjack_apply_action(uint64_t state[static BJ_STATE_SIZE],
+                                   uint64_t action) {
 	assert(state[STATE_OFFSET_PHASE] != PHASE_DONE &&
 	       "apply_action() called on a terminal state");
 
@@ -506,7 +523,7 @@ static void blackjack_apply_action(uint64_t state[], uint64_t action) {
 	apply_decision_action(state, action);
 }
 
-static bool blackjack_is_terminal(const uint64_t state[]) {
+static bool blackjack_is_terminal(const uint64_t state[static BJ_STATE_SIZE]) {
 	return state[STATE_OFFSET_PHASE] == PHASE_DONE;
 }
 
@@ -521,8 +538,8 @@ static bool blackjack_is_terminal(const uint64_t state[]) {
  * 	loss .................................... -1 bet (×2 if doubled)
  * 	late surrender .......................... -0.5 bets
  */
-static void blackjack_get_outcome(const uint64_t state[],
-                                  int64_t scores_out[]) {
+static void blackjack_get_outcome(const uint64_t state[static BJ_STATE_SIZE],
+                                  int64_t scores_out[static BJ_NUM_PLAYERS]) {
 	assert(blackjack_is_terminal(state));
 
 	const int64_t bet     = BJ_SCORE_UNITS_PER_BET;
@@ -584,11 +601,11 @@ static void blackjack_get_outcome(const uint64_t state[],
 #define OBS_HAND_DOUBLED    5 // 1 if doubled down, else 0
 #define OBS_HAND_NUM_FIELDS (OBS_HAND_DOUBLED + 1)
 
-static void blackjack_get_observation(const uint64_t state[], uint64_t player,
-                                      uint64_t* obs_out) {
-	assert(state != NULL);
+static void
+blackjack_get_observation(const uint64_t state[static BJ_STATE_SIZE],
+                          uint64_t player,
+                          uint64_t obs_out[static BJ_OBS_SIZE]) {
 	assert(player < BJ_NUM_PLAYERS);
-	assert(obs_out != NULL);
 	(void)player; // Single player; the shoe is omitted (see blackjack.h)
 
 	obs_out[OBS_DEALER_UP_OFFSET] = state[STATE_OFFSET_DEALER_UP];
@@ -627,8 +644,10 @@ static void blackjack_get_observation(const uint64_t state[], uint64_t player,
 #error "Features layout disagrees with BJ_FEATURES_* in blackjack.h"
 #endif
 
-static void blackjack_get_features(const uint64_t state[], uint64_t player,
-                                   float* features_out) {
+static void
+blackjack_get_features(const uint64_t state[static BJ_STATE_SIZE],
+                       uint64_t player,
+                       float features_out[static BJ_FEATURES_SIZE]) {
 	assert(player < BJ_NUM_PLAYERS);
 	(void)player;
 
@@ -696,9 +715,9 @@ static void advance(char** buf, size_t* remaining, int n) {
 	*remaining -= written;
 }
 
-static uint64_t blackjack_to_string(const uint64_t state[], uint64_t buf_size,
-                                    char* buf) {
-	assert(buf != NULL);
+static uint64_t blackjack_to_string(const uint64_t state[static BJ_STATE_SIZE],
+                                    uint64_t buf_size,
+                                    char buf[static BJ_STRING_BUF_SIZE]) {
 	assert(buf_size >= BJ_STRING_BUF_SIZE);
 
 	char* const start = buf;

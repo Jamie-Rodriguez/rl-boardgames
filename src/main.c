@@ -31,7 +31,7 @@ static int handle_args(int argc, char* argv[], const Game* game) {
  * bootstrap xoshiro256** from a single 64-bit seed, as recommended by
  * the xoshiro256** authors.
  */
-static void seed_rng(uint64_t rng[4]) {
+static void seed_rng(uint64_t rng[static 4]) {
 	uint64_t seed = (uint64_t)time(NULL);
 
 	for (size_t i = 0; i < 4; i++)
@@ -381,7 +381,10 @@ int main_connect4(int argc, char* argv[]) {
 	return 0;
 }
 
-static const char* const checkers_dir_names[] = { "UL", "UR", "DL", "DR" };
+static const char* const checkers_dir_names[][CHECKERS_NUM_DIRS] = {
+	{ "UL", "UR", "DL", "DR" },
+	{ "DR", "DL", "UR", "UL" },
+};
 
 int main_checkers(int argc, char* argv[]) {
 	const Game* game = &checkers;
@@ -409,10 +412,19 @@ int main_checkers(int argc, char* argv[]) {
 		// Actions encode square * 4 + direction; decode for humans
 		printf("Player %" PRIu64 "'s turn. Valid moves:",
 		       current_player + 1);
-		for (uint64_t i = 0; i < num_actions; i++)
+		for (uint64_t i = 0; i < num_actions; i++) {
+			const uint64_t square = actions[i] / CHECKERS_NUM_DIRS;
+			const uint64_t direction =
+			        actions[i] % CHECKERS_NUM_DIRS;
+			const uint64_t shown_square =
+			        current_player == 0
+			                ? square
+			                : CHECKERS_NUM_SQUARES - 1 - square;
+
 			printf(" %" PRIu64 " (sq %" PRIu64 " %s)", actions[i],
-			       actions[i] / 4,
-			       checkers_dir_names[actions[i] % 4]);
+			       shown_square,
+			       checkers_dir_names[current_player][direction]);
+		}
 		printf("\n");
 
 		uint64_t move;
