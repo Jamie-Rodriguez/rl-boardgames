@@ -56,7 +56,8 @@ uint64_t xoshiro256ss(uint64_t s[static 4]) {
  * 	>non-overlapping subsequences for parallel computations.
  */
 void jump(uint64_t s[static 4]) {
-	static const uint64_t JUMP[] = { 0x180ec6d33cfd0aba, 0xd5a61266f0c9392c,
+	static const uint64_t JUMP[] = { 0x180ec6d33cfd0aba,
+	                                 0xd5a61266f0c9392c,
 	                                 0xa9582618e03fc9aa,
 	                                 0x39abdc4529b1661c };
 
@@ -72,6 +73,7 @@ void jump(uint64_t s[static 4]) {
 				s2 ^= s[2];
 				s3 ^= s[3];
 			}
+
 			xoshiro256ss(s);
 		}
 

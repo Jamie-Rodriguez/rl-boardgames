@@ -54,7 +54,7 @@ SortIncludes: false
 IncludeBlocks: Preserve
 
 # Misc
-BreakBeforeBinaryOperators: None
+BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeTernaryOperators: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 2

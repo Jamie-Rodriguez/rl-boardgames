@@ -108,6 +108,7 @@ static void pig_apply_action(uint64_t state[static PIG_STATE_SIZE],
 			// Accumulate, same player decides again
 			state[STATE_OFFSET_TURN_TOTAL] += face;
 		}
+
 		return;
 	}
 
@@ -141,6 +142,7 @@ static void pig_get_outcome(const uint64_t state[static PIG_STATE_SIZE],
 			// Pig is zero-sum: winner takes +1, everyone else -1
 			for (size_t q = 0; q < PIG_NUM_PLAYERS; q++)
 				scores_out[q] = (q == p) ? 1 : -1;
+
 			return;
 		}
 	}
@@ -202,6 +204,7 @@ static uint64_t pig_to_string(const uint64_t state[static PIG_STATE_SIZE],
 		n = snprintf(
 		        buf, remaining, "  Player %zu score: %llu\n", p + 1,
 		        (unsigned long long)state[STATE_OFFSET_SCORES + p]);
+
 		if (n > 0 && (size_t)n < remaining) {
 			buf += n;
 			remaining -= (size_t)n;
@@ -210,6 +213,7 @@ static uint64_t pig_to_string(const uint64_t state[static PIG_STATE_SIZE],
 
 	n = snprintf(buf, remaining, "Turn total: %llu\n",
 	             (unsigned long long)state[STATE_OFFSET_TURN_TOTAL]);
+
 	if (n > 0 && (size_t)n < remaining)
 		buf += n;
 

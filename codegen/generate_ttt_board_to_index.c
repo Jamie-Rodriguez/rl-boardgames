@@ -66,11 +66,11 @@
 #define TTT_BOARD_INDEX_SQUARE_STATES (TTT_NUM_PLAYERS + 1)
 
 #define TTT_BOARD_INDEX_NUM_CODES                                        \
-	(TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
-	 TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
-	 TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
-	 TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
-	 TTT_BOARD_INDEX_SQUARE_STATES)
+	(TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES   \
+	 * TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES \
+	 * TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES \
+	 * TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES \
+	 * TTT_BOARD_INDEX_SQUARE_STATES)
 
 static inline uint64_t
 ttt_features_to_code(const float features[static TTT_FEATURES_SIZE]) {
@@ -210,8 +210,8 @@ static void mark_reachable_codes(
 			const uint64_t child_code =
 			        ttt_features_to_code(child_features);
 
-			assert(ttt_afterstate_to_code(features, square) ==
-			       child_code);
+			assert(ttt_afterstate_to_code(features, square)
+			       == child_code);
 
 			if (tic_tac_toe.is_terminal(child_state)) {
 				assert(statuses[child_code] != STATE_IN_PLAY);
@@ -241,7 +241,8 @@ static inline size_t get_symmetry(
         const uint8_t mapping[static TTT_BOARD_SIZE]) {
 	for (size_t s = 0; s < TTT_BOARD_INDEX_NUM_SYMMETRIES; s++)
 		if (memcmp(symmetry_square[s], mapping,
-		           sizeof(symmetry_square[s])) == 0)
+		           sizeof(symmetry_square[s]))
+		    == 0)
 			return s;
 
 	return TTT_BOARD_INDEX_NUM_SYMMETRIES;
@@ -440,6 +441,7 @@ int main(void) {
 		        "positions, but TTT_STATE_SPACE_SIZE is %llu\n",
 		        (unsigned long long)num_positions_seen,
 		        (unsigned long long)TTT_STATE_SPACE_SIZE);
+
 		return 1;
 	}
 
@@ -462,6 +464,7 @@ int main(void) {
 		        "generate_ttt_board_to_index: %llu classes do not fit "
 		        "a uint16_t entry\n",
 		        (unsigned long long)num_states);
+
 		return 1;
 	}
 

@@ -67,18 +67,18 @@
 
 #define FILES_EVEN (((~UINT64_C(0) / 3) & ROW_MASK(0)) * FILE_MASK(0))
 #define ROWS_ODD                                                      \
-	(ROW_MASK(1) *                                                \
-	 (LOW_BITS(2 * CHECKERS_NUM_COLS * (CHECKERS_NUM_ROWS / 2)) / \
-	  LOW_BITS(2 * CHECKERS_NUM_COLS)))
+	(ROW_MASK(1)                                                  \
+	 * (LOW_BITS(2 * CHECKERS_NUM_COLS * (CHECKERS_NUM_ROWS / 2)) \
+	    / LOW_BITS(2 * CHECKERS_NUM_COLS)))
 #define DARK_SQUARES (FILES_EVEN ^ ROWS_ODD)
 
 // The mover is orientated on the bottom rows, with the opponent on the top rows
 #define MEN_INIT_MOVER \
 	(DARK_SQUARES & LOW_BITS(CHECKERS_MEN_ROWS * CHECKERS_NUM_COLS))
-#define MEN_INIT_OPP                                      \
-	(DARK_SQUARES &                                   \
-	 (LOW_BITS(CHECKERS_MEN_ROWS * CHECKERS_NUM_COLS) \
-	  << ((CHECKERS_NUM_ROWS - CHECKERS_MEN_ROWS) * CHECKERS_NUM_COLS)))
+#define MEN_INIT_OPP                                        \
+	(DARK_SQUARES                                       \
+	 & (LOW_BITS(CHECKERS_MEN_ROWS * CHECKERS_NUM_COLS) \
+	    << ((CHECKERS_NUM_ROWS - CHECKERS_MEN_ROWS) * CHECKERS_NUM_COLS)))
 
 // The mover always promotes on the far row of the board
 #define PROMO_ROW ROW_MASK(CHECKERS_NUM_ROWS - 1)
@@ -139,8 +139,8 @@ static bool piece_can_jump(const uint64_t state[static CHECKERS_STATE_SIZE],
 		const uint64_t adjacent_enemy =
 		        shift_dir(piece, direction) & opp;
 
-		if (adjacent_enemy &&
-		    (shift_dir(adjacent_enemy, direction) & empty))
+		if (adjacent_enemy
+		    && (shift_dir(adjacent_enemy, direction) & empty))
 			return true;
 	}
 
@@ -171,8 +171,8 @@ static bool has_any_move(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 		if (shift_dir(kings, bwd_move) & empty)
 			return true;
 		// Backward jumps/captures
-		if (shift_dir(shift_dir(kings, bwd_move) & opp, bwd_move) &
-		    empty)
+		if (shift_dir(shift_dir(kings, bwd_move) & opp, bwd_move)
+		    & empty)
 			return true;
 	}
 
@@ -196,8 +196,8 @@ static bool has_any_jump(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 
 		const uint64_t bwd_move = NUM_FWD_DIRS + fwd_move;
 
-		if (shift_dir(shift_dir(kings, bwd_move) & opp, bwd_move) &
-		    empty)
+		if (shift_dir(shift_dir(kings, bwd_move) & opp, bwd_move)
+		    & empty)
 			return true;
 	}
 
@@ -243,10 +243,10 @@ static uint64_t checkers_get_valid_actions(
 
 	// We are mid multi-jump - only the jumping piece may act
 	const uint64_t sources = state[STATE_OFFSET_CONTINUATION]
-	                                 ? state[STATE_OFFSET_CONTINUATION]
-	                                 : own;
+	                         ? state[STATE_OFFSET_CONTINUATION]
+	                         : own;
 
-	// Jumps are mandatory: emit them first and, if any, only them
+	// Jumps are *mandatory*: emit them first and, if any, only them
 
 	/**
 	 * Iterates through *number of set bits* only - removes the lowest-set
@@ -264,7 +264,8 @@ static uint64_t checkers_get_valid_actions(
 		const uint64_t directions =
 		        king ? CHECKERS_NUM_DIRS : NUM_FWD_DIRS;
 
-		for (uint64_t direction = 0; direction < directions;
+		for (uint64_t direction = 0;
+		     direction < directions;
 		     direction++) {
 			const uint64_t move = shift_dir(piece, direction) & opp;
 
@@ -286,7 +287,8 @@ static uint64_t checkers_get_valid_actions(
 		const uint64_t directions =
 		        king ? CHECKERS_NUM_DIRS : NUM_FWD_DIRS;
 
-		for (uint64_t direction = 0; direction < directions;
+		for (uint64_t direction = 0;
+		     direction < directions;
 		     direction++) {
 			if (shift_dir(piece, direction) & empty)
 				actions_out[n++] = ACTION(square, direction);
@@ -314,8 +316,8 @@ static void checkers_apply_action(uint64_t state[static CHECKERS_STATE_SIZE],
 	const uint64_t opp  = opp_pieces(state);
 
 	assert(own & from);
-	assert(state[STATE_OFFSET_CONTINUATION] == 0 ||
-	       state[STATE_OFFSET_CONTINUATION] == from);
+	assert(state[STATE_OFFSET_CONTINUATION] == 0
+	       || state[STATE_OFFSET_CONTINUATION] == from);
 
 	const bool is_king = (state[STATE_OFFSET_KINGS] & from) != 0;
 
@@ -386,8 +388,8 @@ static void checkers_apply_action(uint64_t state[static CHECKERS_STATE_SIZE],
 	uint64_t rotated[CHECKERS_NUM_PLAYERS];
 
 	for (uint64_t p = 0; p < CHECKERS_NUM_PLAYERS; p++)
-		rotated[p] = rotate180(state[STATE_OFFSET_BOARDS +
-		                             (p + 1) % CHECKERS_NUM_PLAYERS]);
+		rotated[p] = rotate180(state[STATE_OFFSET_BOARDS
+		                             + (p + 1) % CHECKERS_NUM_PLAYERS]);
 
 	for (uint64_t p = 0; p < CHECKERS_NUM_PLAYERS; p++)
 		state[STATE_OFFSET_BOARDS + p] = rotated[p];
@@ -397,8 +399,8 @@ static void checkers_apply_action(uint64_t state[static CHECKERS_STATE_SIZE],
 
 static bool
 checkers_is_terminal(const uint64_t state[static CHECKERS_STATE_SIZE]) {
-	return state[STATE_OFFSET_QUIET_PLIES] >= DRAW_PLIES ||
-	       !has_any_move(state);
+	return state[STATE_OFFSET_QUIET_PLIES] >= DRAW_PLIES
+	       || !has_any_move(state);
 }
 
 static void
@@ -413,8 +415,8 @@ checkers_get_outcome(const uint64_t state[static CHECKERS_STATE_SIZE],
 		 */
 		for (uint64_t p = 0; p < CHECKERS_NUM_PLAYERS; p++)
 			scores_out[p] = p == state[STATE_OFFSET_CURRENT_PLAYER]
-			                        ? -1
-			                        : 1;
+			                ? -1
+			                : 1;
 
 		return;
 	}
@@ -443,18 +445,18 @@ checkers_get_observation(const uint64_t state[static CHECKERS_STATE_SIZE],
 			const uint64_t square_bitboard = UINT64_C(1) << s;
 			obs_out[p * CHECKERS_NUM_SQUARES + s] =
 			        !(board & square_bitboard)  ? CHECKERS_OBS_EMPTY
-				: (kings & square_bitboard) ? CHECKERS_OBS_KING
-				                            : CHECKERS_OBS_MAN;
+			        : (kings & square_bitboard) ? CHECKERS_OBS_KING
+			                                    : CHECKERS_OBS_MAN;
 		}
 	}
 
 	const uint64_t continuation = state[STATE_OFFSET_CONTINUATION];
 
 	obs_out[CHECKERS_OBS_CONTINUATION_OFFSET] =
-	        continuation ? (uint64_t)__builtin_ctzll(continuation)
+		continuation ? (uint64_t)__builtin_ctzll(continuation)
 		             : CHECKERS_OBS_NO_CONTINUATION;
 	obs_out[CHECKERS_OBS_QUIET_PLIES_OFFSET] =
-	        state[STATE_OFFSET_QUIET_PLIES];
+		state[STATE_OFFSET_QUIET_PLIES];
 }
 
 static void
@@ -478,12 +480,12 @@ checkers_get_features(const uint64_t state[static CHECKERS_STATE_SIZE],
 	const float quiet =
 	        (float)obs[CHECKERS_OBS_QUIET_PLIES_OFFSET] / (float)DRAW_PLIES;
 	for (size_t sq = 0; sq < CHECKERS_NUM_SQUARES; sq++) {
-		features_out[2 * CHECKERS_NUM_PLAYERS * CHECKERS_NUM_SQUARES +
-		             sq] =
+		features_out[2 * CHECKERS_NUM_PLAYERS * CHECKERS_NUM_SQUARES
+		             + sq] =
 		        (float)(obs[CHECKERS_OBS_CONTINUATION_OFFSET] == sq);
-		features_out[(2 * CHECKERS_NUM_PLAYERS + 1) *
-		                     CHECKERS_NUM_SQUARES +
-		             sq] = quiet;
+		features_out[(2 * CHECKERS_NUM_PLAYERS + 1)
+		                     * CHECKERS_NUM_SQUARES
+		             + sq] = quiet;
 	}
 }
 
@@ -508,8 +510,8 @@ static inline char square_char(const uint64_t state[static CHECKERS_STATE_SIZE],
 	        (board_to_display(state, state[STATE_OFFSET_KINGS]) & bit) != 0;
 
 	for (uint64_t p = 0; p < CHECKERS_NUM_PLAYERS; p++)
-		if (board_to_display(state, state[STATE_OFFSET_BOARDS + p]) &
-		    bit) {
+		if (board_to_display(state, state[STATE_OFFSET_BOARDS + p])
+		    & bit) {
 			const uint64_t owner =
 			        (mover + p) % CHECKERS_NUM_PLAYERS;
 

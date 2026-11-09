@@ -70,8 +70,8 @@ static inline Move decode_action(uint64_t action) {
 
 #ifndef NDEBUG
 static void assert_state_is_valid(const uint64_t state[static TMM_STATE_SIZE]) {
-	assert(state[STATE_OFFSET_PHASE] == PHASE_PLACEMENT ||
-	       state[STATE_OFFSET_PHASE] == PHASE_MOVEMENT);
+	assert(state[STATE_OFFSET_PHASE] == PHASE_PLACEMENT
+	       || state[STATE_OFFSET_PHASE] == PHASE_MOVEMENT);
 	assert(state[STATE_OFFSET_CURRENT_PLAYER] < TMM_NUM_PLAYERS);
 
 	tmm_bitboard occupied = 0;
@@ -102,14 +102,14 @@ static void assert_state_is_valid(const uint64_t state[static TMM_STATE_SIZE]) {
 		 */
 		for (size_t p = 0; p < TMM_NUM_PLAYERS; p++)
 			assert((size_t)__builtin_popcountll(
-			               state[STATE_OFFSET_BOARD + p]) ==
-			       completed_rounds +
-			               (p < current_player ? 1U : 0U));
+			               state[STATE_OFFSET_BOARD + p])
+			       == completed_rounds
+			                  + (p < current_player ? 1U : 0U));
 	} else {
 		for (size_t p = 0; p < TMM_NUM_PLAYERS; p++)
 			assert(__builtin_popcountll(
-			               state[STATE_OFFSET_BOARD + p]) ==
-			       NUM_PIECES_PER_PLAYER);
+			               state[STATE_OFFSET_BOARD + p])
+			       == NUM_PIECES_PER_PLAYER);
 	}
 }
 #else
@@ -125,7 +125,8 @@ static void tmm_init(const void* config,
 	state[STATE_OFFSET_CURRENT_PLAYER] = 0;
 
 	for (size_t p = STATE_OFFSET_BOARD;
-	     p < STATE_OFFSET_BOARD + TMM_NUM_PLAYERS; p++)
+	     p < STATE_OFFSET_BOARD + TMM_NUM_PLAYERS;
+	     p++)
 		state[p] = 0; // Empty bitboard
 
 	assert_state_is_valid(state);
@@ -157,8 +158,8 @@ tmm_get_valid_actions(const uint64_t state[static TMM_STATE_SIZE],
 	        state[STATE_OFFSET_PHASE] == PHASE_PLACEMENT
 	                ? (tmm_bitboard)(1U << FROM_HAND)
 	                : (tmm_bitboard)
-	                          state[STATE_OFFSET_BOARD +
-	                                state[STATE_OFFSET_CURRENT_PLAYER]];
+	                          state[STATE_OFFSET_BOARD
+	                                + state[STATE_OFFSET_CURRENT_PLAYER]];
 
 	size_t action_count = 0;
 
@@ -174,11 +175,12 @@ tmm_get_valid_actions(const uint64_t state[static TMM_STATE_SIZE],
 		for (tmm_bitboard e = empty; e; e &= e - 1)
 			actions_out[action_count++] = encode_move(
 			        (Move){ .from = from,
-				        .to   = (uint8_t)__builtin_ctz(e) });
+			                .to   = (uint8_t)__builtin_ctz(e) });
 	}
 
-	assert(action_count == (size_t)__builtin_popcount(sources) *
-	                               (size_t)__builtin_popcount(empty));
+	assert(action_count
+	       == (size_t)__builtin_popcount(sources)
+	                  * (size_t)__builtin_popcount(empty));
 	assert(action_count > 0);
 	assert(action_count <= TMM_MAX_NUM_ACTIONS);
 
@@ -211,8 +213,9 @@ static void tmm_apply_action(uint64_t state[static TMM_STATE_SIZE],
 	board = (tmm_bitboard)((board & ~from) | to);
 	state[STATE_OFFSET_BOARD + player] = board;
 
-	if (placing && __builtin_popcount(occupied) + 1 ==
-	                       NUM_PIECES_PER_PLAYER * TMM_NUM_PLAYERS)
+	if (placing
+	    && __builtin_popcount(occupied) + 1
+	               == NUM_PIECES_PER_PLAYER * TMM_NUM_PLAYERS)
 		state[STATE_OFFSET_PHASE] = PHASE_MOVEMENT;
 
 	state[STATE_OFFSET_CURRENT_PLAYER] = (player + 1) % TMM_NUM_PLAYERS;
@@ -244,6 +247,7 @@ static void tmm_get_outcome(const uint64_t state[static TMM_STATE_SIZE],
 			// rest are losers
 			for (size_t p = 0; p < TMM_NUM_PLAYERS; p++)
 				scores_out[p] = (p == player) ? 1 : -1;
+
 			return;
 		}
 	}
