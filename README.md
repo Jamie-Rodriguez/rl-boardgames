@@ -3,22 +3,22 @@ This repo contains a collection of board games, written in C (C99 and built usin
 Available Games
 ===============
 
-| Game                              | Tic-Tac-Toe | Pig | Blackjack | Connect-4 | Checkers  |
-|-----------------------------------|:-----------:|:---:|:---------:|:---------:|:---------:|
-| Number of Players                 |      2      |  2  |     1     |     2     |     2     |
-| State Size                        |      3      |  5  |     42    |     3     |     6     |
-| Max Actions                       |      9      |  6  |    312†   |     7     |     48    |
-| Max Decision Actions              |      9      |  2  |     5     |     7     |     48    |
-| Max Chance Actions                |      0      |  6  |    312†   |     0     |     0     |
-| Action Space Size                 |      9      |  2  |     5     |     7     |    256    |
-| Max Turns                         |      9      | ∞ ‡ |    88§    |     42    |  15,632§  |
-| State Space Size                  |    5,478    | ∞ ‡ |    ∞ ‡    | 4.5×10¹²  |    ∞ ‡    |
-| Observation: Number of Dimensions |      3      |  1  |     1     |     3     |     3     |
-| Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   | [2, 6, 7] | [6, 8, 8] |
-| Observation: Size                 |      18     |  3  |     31    |     84    |    384    |
-| Features: Number of Dimensions    |      3      |  1  |     1     |     3     |     3     |
-| Features: Dimensions              |  [2, 3, 3]  | [3] |    [25]   | [2, 6, 7] | [6, 8, 8] |
-| Features: Size                    |      18     |  3  |     25    |     84    |    384    |
+| Game                              | Tic-Tac-Toe | Pig | Blackjack | Connect-4 | Checkers  | Three Men's Morris |
+|-----------------------------------|:-----------:|:---:|:---------:|:---------:|:---------:|:------------------:|
+| Number of Players                 |      2      |  2  |     1     |     2     |     2     |         2          |
+| State Size                        |      3      |  5  |     42    |     3     |     6     |         4          |
+| Max Actions                       |      9      |  6  |    312†   |     7     |     48    |         9          |
+| Max Decision Actions              |      9      |  2  |     5     |     7     |     48    |         9          |
+| Max Chance Actions                |      0      |  6  |    312†   |     0     |     0     |         0          |
+| Action Space Size                 |      9      |  2  |     5     |     7     |    256    |         90         |
+| Max Turns                         |      9      | ∞ ‡ |    88§    |     42    |  15,632§  |        ∞ ‡         |
+| State Space Size                  |    5,478    | ∞ ‡ |    ∞ ‡    | 4.5×10¹²  |    ∞ ‡    |       5,710§       |
+| Observation: Number of Dimensions |      3      |  1  |     1     |     3     |     3     |         1          |
+| Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   | [2, 6, 7] | [6, 8, 8] |        [20]        |
+| Observation: Size                 |      18     |  3  |     31    |     84    |    384    |         20         |
+| Features: Number of Dimensions    |      3      |  1  |     1     |     3     |     3     |         3          |
+| Features: Dimensions              |  [2, 3, 3]  | [3] |    [25]   | [2, 6, 7] | [6, 8, 8] |     [4, 3, 3]      |
+| Features: Size                    |      18     |  3  |     25    |     84    |    384    |         36         |
 
 **Note:** Each game also defines a `STRING_BUF_SIZE` macro.
 
@@ -26,7 +26,7 @@ This is not shown in the table above as it is a derived constant for internal fo
 
 † With the default six-deck shoe: at a chance node the action-list holds one entry per card remaining, so `BJ_MAX_NUM_ACTIONS` scales as `52 * BJ_NUM_DECKS` (see [Blackjack](#blackjack)).
 
-‡ No finite bound exists (e.g. pig can re-roll forever) or the count exceeds a `uint64` (blackjack's shoe compositions, checkers' ~5 × 10²⁰ positions); the macro is defined as `UINT64_MAX`, per the convention in [include/games/board_game.h](include/games/board_game.h).
+‡ No finite bound exists (e.g. Pig can re-roll forever and Three Men's Morris can repeat movement positions indefinitely) or the count exceeds a `uint64` (blackjack's shoe compositions, checkers' ~5 × 10²⁰ positions); the macro is defined as `UINT64_MAX`, per the convention in [include/games/board_game.h](include/games/board_game.h).
 
 § A documented loose upper bound rather than an _exact_ maximum (see the derivation in the game's header).
 
@@ -119,6 +119,13 @@ Every game must define the following compile-time macros, each prefixed with a n
 | `_OBS_SIZE`                 | Total number of elements in the observation. Must equal the product of the first `OBS_NDIMS` entries in `obs_dims`.                                                                                                                                    |
 | `_FEATURES_NDIMS`           | Number of dimensions in the features tensor.                                                                                                                                                                                                           |
 | `_FEATURES_SIZE`            | Total number of elements in the features tensor.                                                                                                                                                                                                       |
+
+Action Encodings
+----------------
+
+More complex games that require source and destination to disambiguate moves will generally use `action = from × BOARD_SIZE + to`, as in [Three Men's Morris](include/games/three_mens_morris.h). Here, `from` and `to` are square indices; decode them using integer division (`from = ⌊action ÷ BOARD_SIZE⌋`) and remainder (`to = action mod BOARD_SIZE`). Each game's header documents its exact encoding and any special actions.
+
+Special source indices can represent moves from outside the board. For example, Three Men's Morris uses `from == BOARD_SIZE` to represent a placement from the player's hand in the first phase of the game, giving `(BOARD_SIZE + 1) × BOARD_SIZE = 90` action IDs. `ACTION_SPACE_SIZE` covers this full ID range, including unused encodings, while `MAX_NUM_ACTIONS` bounds the number of legal actions returned by `get_valid_actions()` (at most nine in Three Men's Morris). Callers should select actions from that returned list.
 
 Function Pointers
 -----------------
