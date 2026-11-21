@@ -57,8 +57,8 @@ uint64_t xoshiro256ss(uint64_t s[static 4]) {
  */
 void jump(uint64_t s[static 4]) {
 	static const uint64_t JUMP[] = { 0x180ec6d33cfd0aba, 0xd5a61266f0c9392c,
-		                         0xa9582618e03fc9aa,
-		                         0x39abdc4529b1661c };
+	                                 0xa9582618e03fc9aa,
+	                                 0x39abdc4529b1661c };
 
 	uint64_t s0 = 0;
 	uint64_t s1 = 0;
@@ -94,9 +94,9 @@ void jump(uint64_t s[static 4]) {
  */
 void long_jump(uint64_t s[static 4]) {
 	static const uint64_t LONG_JUMP[] = { 0x76e15d3efefdcbbf,
-		                              0xc5004e441c522fb3,
-		                              0x77710069854ee241,
-		                              0x39109bb02acbe635 };
+	                                      0xc5004e441c522fb3,
+	                                      0x77710069854ee241,
+	                                      0x39109bb02acbe635 };
 
 	uint64_t s0 = 0;
 	uint64_t s1 = 0;

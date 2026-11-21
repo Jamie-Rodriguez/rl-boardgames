@@ -40,26 +40,29 @@
 #define PIG_DICE_PLAYER PIG_NUM_PLAYERS
 
 
-static void pig_init(const void* config, uint64_t state[]) {
+static void pig_init(const void* config,
+                     uint64_t state[static PIG_STATE_SIZE]) {
 	(void)config; // Unused
 
 	for (size_t i = 0; i < PIG_STATE_SIZE; i++)
 		state[i] = 0;
 }
 
-static uint64_t pig_get_current_player(const uint64_t state[]) {
+static uint64_t
+pig_get_current_player(const uint64_t state[static PIG_STATE_SIZE]) {
 	if (state[STATE_OFFSET_AWAITING_ROLL])
 		return PIG_DICE_PLAYER;
 
 	return state[STATE_OFFSET_TURN_PLAYER];
 }
 
-static bool pig_is_chance_node(const uint64_t state[]) {
+static bool pig_is_chance_node(const uint64_t state[static PIG_STATE_SIZE]) {
 	return state[STATE_OFFSET_AWAITING_ROLL] != 0;
 }
 
-static uint64_t pig_get_valid_actions(const uint64_t state[],
-                                      uint64_t actions_out[]) {
+static uint64_t
+pig_get_valid_actions(const uint64_t state[static PIG_STATE_SIZE],
+                      uint64_t actions_out[static PIG_MAX_NUM_ACTIONS]) {
 	if (state[STATE_OFFSET_AWAITING_ROLL]) {
 		// Chance node: six possible die faces (action ID = face - 1)
 		for (uint64_t i = 0; i < PIG_NUM_DIE_FACES; i++)
@@ -80,9 +83,10 @@ static inline uint64_t pig_next_player(uint64_t player) {
 }
 
 // Forward-declaration so that pig_apply_action() can use pig_is_terminal()
-static bool pig_is_terminal(const uint64_t state[]);
+static bool pig_is_terminal(const uint64_t state[static PIG_STATE_SIZE]);
 
-static void pig_apply_action(uint64_t state[], uint64_t action) {
+static void pig_apply_action(uint64_t state[static PIG_STATE_SIZE],
+                             uint64_t action) {
 	assert(!pig_is_terminal(state));
 
 	const uint64_t player = state[STATE_OFFSET_TURN_PLAYER];
@@ -121,14 +125,15 @@ static void pig_apply_action(uint64_t state[], uint64_t action) {
 	}
 }
 
-static bool pig_is_terminal(const uint64_t state[]) {
+static bool pig_is_terminal(const uint64_t state[static PIG_STATE_SIZE]) {
 	for (size_t p = 0; p < PIG_NUM_PLAYERS; p++)
 		if (state[STATE_OFFSET_SCORES + p] >= PIG_TARGET)
 			return true;
 	return false;
 }
 
-static void pig_get_outcome(const uint64_t state[], int64_t scores_out[]) {
+static void pig_get_outcome(const uint64_t state[static PIG_STATE_SIZE],
+                            int64_t scores_out[static PIG_NUM_PLAYERS]) {
 	assert(pig_is_terminal(state));
 
 	for (size_t p = 0; p < PIG_NUM_PLAYERS; p++) {
@@ -141,11 +146,10 @@ static void pig_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 	}
 }
 
-static void pig_get_observation(const uint64_t state[], uint64_t player,
-                                uint64_t* obs_out) {
-	assert(state != NULL);
+static void pig_get_observation(const uint64_t state[static PIG_STATE_SIZE],
+                                uint64_t player,
+                                uint64_t obs_out[static PIG_OBS_SIZE]) {
 	assert(player < PIG_NUM_PLAYERS);
-	assert(obs_out != NULL);
 
 	// Scores rotated so the requesting player is first
 	for (size_t i = 0; i < PIG_NUM_PLAYERS; i++) {
@@ -156,8 +160,9 @@ static void pig_get_observation(const uint64_t state[], uint64_t player,
 	obs_out[PIG_NUM_PLAYERS] = state[STATE_OFFSET_TURN_TOTAL];
 }
 
-static void pig_get_features(const uint64_t state[], uint64_t player,
-                             float* features_out) {
+static void pig_get_features(const uint64_t state[static PIG_STATE_SIZE],
+                             uint64_t player,
+                             float features_out[static PIG_FEATURES_SIZE]) {
 	assert(player < PIG_NUM_PLAYERS);
 
 	const float norm = 1.0f / (float)PIG_TARGET;
@@ -171,9 +176,9 @@ static void pig_get_features(const uint64_t state[], uint64_t player,
 	        (float)state[STATE_OFFSET_TURN_TOTAL] * norm;
 }
 
-static uint64_t pig_to_string(const uint64_t state[], uint64_t buf_size,
-                              char* buf) {
-	assert(buf != NULL);
+static uint64_t pig_to_string(const uint64_t state[static PIG_STATE_SIZE],
+                              uint64_t buf_size,
+                              char buf[static PIG_STRING_BUF_SIZE]) {
 	assert(buf_size >= PIG_STRING_BUF_SIZE);
 
 	char* const start = buf;

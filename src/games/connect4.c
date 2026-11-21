@@ -88,24 +88,26 @@ static inline bool has_won(uint64_t board) {
 	return false;
 }
 
-static void c4_init(const void* config, uint64_t state[]) {
+static void c4_init(const void* config, uint64_t state[static C4_STATE_SIZE]) {
 	(void)config; // Unused
 
 	for (size_t i = 0; i < C4_STATE_SIZE; i++)
 		state[i] = 0;
 }
 
-static uint64_t c4_get_current_player(const uint64_t state[]) {
+static uint64_t
+c4_get_current_player(const uint64_t state[static C4_STATE_SIZE]) {
 	return state[STATE_OFFSET_CURRENT_PLAYER];
 }
 
-static bool c4_is_chance_node(const uint64_t state[]) {
+static bool c4_is_chance_node(const uint64_t state[static C4_STATE_SIZE]) {
 	(void)state;
 	return false;
 }
 
-static uint64_t c4_get_valid_actions(const uint64_t state[],
-                                     uint64_t actions_out[]) {
+static uint64_t
+c4_get_valid_actions(const uint64_t state[static C4_STATE_SIZE],
+                     uint64_t actions_out[static C4_MAX_NUM_ACTIONS]) {
 	uint64_t occupied = 0;
 
 	for (size_t p = 0; p < C4_NUM_PLAYERS; p++)
@@ -120,9 +122,10 @@ static uint64_t c4_get_valid_actions(const uint64_t state[],
 	return n;
 }
 
-static bool c4_is_terminal(const uint64_t state[]);
+static bool c4_is_terminal(const uint64_t state[static C4_STATE_SIZE]);
 
-static void c4_apply_action(uint64_t state[], uint64_t action) {
+static void c4_apply_action(uint64_t state[static C4_STATE_SIZE],
+                            uint64_t action) {
 	assert(!c4_is_terminal(state));
 	assert(action < C4_NUM_COLS);
 
@@ -154,7 +157,7 @@ static void c4_apply_action(uint64_t state[], uint64_t action) {
 	state[STATE_OFFSET_CURRENT_PLAYER] = (player + 1) % C4_NUM_PLAYERS;
 }
 
-static bool c4_is_terminal(const uint64_t state[]) {
+static bool c4_is_terminal(const uint64_t state[static C4_STATE_SIZE]) {
 	uint64_t occupied = 0;
 
 	for (size_t p = 0; p < C4_NUM_PLAYERS; p++)
@@ -170,7 +173,8 @@ static bool c4_is_terminal(const uint64_t state[]) {
 	return false;
 }
 
-static void c4_get_outcome(const uint64_t state[], int64_t scores_out[]) {
+static void c4_get_outcome(const uint64_t state[static C4_STATE_SIZE],
+                           int64_t scores_out[static C4_NUM_PLAYERS]) {
 	assert(c4_is_terminal(state));
 
 	for (uint64_t p = 0; p < C4_NUM_PLAYERS; p++) {
@@ -187,11 +191,10 @@ static void c4_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 		scores_out[p] = 0;
 }
 
-static void c4_get_observation(const uint64_t state[], uint64_t player,
-                               uint64_t* obs_out) {
-	assert(state != NULL);
+static void c4_get_observation(const uint64_t state[static C4_STATE_SIZE],
+                               uint64_t player,
+                               uint64_t obs_out[static C4_OBS_SIZE]) {
 	assert(player < C4_NUM_PLAYERS);
-	assert(obs_out != NULL);
 
 	size_t i = 0;
 
@@ -202,15 +205,16 @@ static void c4_get_observation(const uint64_t state[], uint64_t player,
 		for (uint64_t r = 0; r < C4_NUM_ROWS; r++)
 			for (uint64_t c = 0; c < C4_NUM_COLS; c++)
 				obs_out[i++] = (uint64_t)((board >>
-				                          (c * COL_BITS + r)) &
-				                         1);
+				                           (c * COL_BITS + r)) &
+				                          1);
 	}
 
 	assert(i == C4_OBS_SIZE);
 }
 
-static void c4_get_features(const uint64_t state[], uint64_t player,
-                            float* features_out) {
+static void c4_get_features(const uint64_t state[static C4_STATE_SIZE],
+                            uint64_t player,
+                            float features_out[static C4_FEATURES_SIZE]) {
 	assert(player < C4_NUM_PLAYERS);
 
 	uint64_t obs[C4_OBS_SIZE];
@@ -221,7 +225,8 @@ static void c4_get_features(const uint64_t state[], uint64_t player,
 		features_out[i] = (float)obs[i];
 }
 
-static inline char piece_at(const uint64_t state[], uint64_t bit_index) {
+static inline char piece_at(const uint64_t state[static C4_STATE_SIZE],
+                            uint64_t bit_index) {
 	assert(bit_index < C4_NUM_COLS * COL_BITS);
 
 	const uint64_t bit = UINT64_C(1) << bit_index;
@@ -233,9 +238,9 @@ static inline char piece_at(const uint64_t state[], uint64_t bit_index) {
 	return '.';
 }
 
-static uint64_t c4_to_string(const uint64_t state[], uint64_t buf_size,
-                             char* buf) {
-	assert(buf != NULL);
+static uint64_t c4_to_string(const uint64_t state[static C4_STATE_SIZE],
+                             uint64_t buf_size,
+                             char buf[static C4_STRING_BUF_SIZE]) {
 	assert(buf_size >= C4_STRING_BUF_SIZE);
 
 	char* const start     = buf;

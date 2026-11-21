@@ -69,8 +69,7 @@ static inline Move decode_action(uint64_t action) {
 }
 
 #ifndef NDEBUG
-static void assert_state_is_valid(const uint64_t state[]) {
-	assert(state != NULL);
+static void assert_state_is_valid(const uint64_t state[static TMM_STATE_SIZE]) {
 	assert(state[STATE_OFFSET_PHASE] == PHASE_PLACEMENT ||
 	       state[STATE_OFFSET_PHASE] == PHASE_MOVEMENT);
 	assert(state[STATE_OFFSET_CURRENT_PLAYER] < TMM_NUM_PLAYERS);
@@ -117,9 +116,9 @@ static void assert_state_is_valid(const uint64_t state[]) {
 #define assert_state_is_valid(state) ((void)0)
 #endif
 
-static void tmm_init(const void* config, uint64_t state[]) {
+static void tmm_init(const void* config,
+                     uint64_t state[static TMM_STATE_SIZE]) {
 	(void)config; // Unused
-	assert(state != NULL);
 
 	// Initialise state
 	state[STATE_OFFSET_PHASE]          = PHASE_PLACEMENT;
@@ -132,21 +131,22 @@ static void tmm_init(const void* config, uint64_t state[]) {
 	assert_state_is_valid(state);
 }
 
-static uint64_t tmm_get_current_player(const uint64_t state[]) {
+static uint64_t
+tmm_get_current_player(const uint64_t state[static TMM_STATE_SIZE]) {
 	assert_state_is_valid(state);
 	return state[STATE_OFFSET_CURRENT_PLAYER];
 }
 
-static bool tmm_is_chance_node(const uint64_t state[]) {
+static bool tmm_is_chance_node(const uint64_t state[static TMM_STATE_SIZE]) {
 	assert_state_is_valid(state);
 	(void)state;
 	return false;
 }
 
-static uint64_t tmm_get_valid_actions(const uint64_t state[],
-                                      uint64_t actions_out[]) {
+static uint64_t
+tmm_get_valid_actions(const uint64_t state[static TMM_STATE_SIZE],
+                      uint64_t actions_out[static TMM_MAX_NUM_ACTIONS]) {
 	assert_state_is_valid(state);
-	assert(actions_out != NULL);
 
 	tmm_bitboard occupied = 0;
 	for (size_t p = 0; p < TMM_NUM_PLAYERS; p++)
@@ -185,9 +185,10 @@ static uint64_t tmm_get_valid_actions(const uint64_t state[],
 	return action_count;
 }
 
-static bool tmm_is_terminal(const uint64_t state[]);
+static bool tmm_is_terminal(const uint64_t state[static TMM_STATE_SIZE]);
 
-static void tmm_apply_action(uint64_t state[], uint64_t action) {
+static void tmm_apply_action(uint64_t state[static TMM_STATE_SIZE],
+                             uint64_t action) {
 	assert_state_is_valid(state);
 	assert(!tmm_is_terminal(state));
 
@@ -219,7 +220,7 @@ static void tmm_apply_action(uint64_t state[], uint64_t action) {
 	assert_state_is_valid(state);
 }
 
-static bool tmm_is_terminal(const uint64_t state[]) {
+static bool tmm_is_terminal(const uint64_t state[static TMM_STATE_SIZE]) {
 	assert_state_is_valid(state);
 
 	for (size_t player = 0; player < TMM_NUM_PLAYERS; player++)
@@ -230,10 +231,10 @@ static bool tmm_is_terminal(const uint64_t state[]) {
 	return false;
 }
 
-static void tmm_get_outcome(const uint64_t state[], int64_t scores_out[]) {
+static void tmm_get_outcome(const uint64_t state[static TMM_STATE_SIZE],
+                            int64_t scores_out[static TMM_NUM_PLAYERS]) {
 	assert_state_is_valid(state);
 	assert(tmm_is_terminal(state));
-	assert(scores_out != NULL);
 
 	for (size_t player = 0; player < TMM_NUM_PLAYERS; player++) {
 		if (tmm_check_win(
@@ -255,11 +256,11 @@ static void tmm_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 		scores_out[player] = 0;
 }
 
-static void tmm_get_observation(const uint64_t state[], uint64_t player,
-                                uint64_t* obs_out) {
+static void tmm_get_observation(const uint64_t state[static TMM_STATE_SIZE],
+                                uint64_t player,
+                                uint64_t obs_out[static TMM_OBS_SIZE]) {
 	assert_state_is_valid(state);
 	assert(player < TMM_NUM_PLAYERS);
-	assert(obs_out != NULL);
 
 	for (size_t p = 0; p < TMM_NUM_PLAYERS; p++) {
 		const uint64_t current_player = (player + p) % TMM_NUM_PLAYERS;
@@ -272,10 +273,9 @@ static void tmm_get_observation(const uint64_t state[], uint64_t player,
 	}
 }
 
-static void tmm_get_features(const uint64_t state[], uint64_t player,
-                             float* features_out) {
-	assert(features_out != NULL);
-
+static void tmm_get_features(const uint64_t state[static TMM_STATE_SIZE],
+                             uint64_t player,
+                             float features_out[static TMM_FEATURES_SIZE]) {
 	uint64_t obs[TMM_OBS_SIZE];
 	tmm_get_observation(state, player, obs);
 
@@ -283,10 +283,10 @@ static void tmm_get_features(const uint64_t state[], uint64_t player,
 		features_out[i] = (float)obs[i];
 }
 
-static uint64_t tmm_to_string(const uint64_t state[], uint64_t buf_size,
-                              char* buf) {
+static uint64_t tmm_to_string(const uint64_t state[static TMM_STATE_SIZE],
+                              uint64_t buf_size,
+                              char buf[static TMM_STRING_BUF_SIZE]) {
 	assert_state_is_valid(state);
-	assert(buf != NULL);
 	assert(buf_size >= TMM_STRING_BUF_SIZE);
 
 	char pieces[TMM_BOARD_SIZE];

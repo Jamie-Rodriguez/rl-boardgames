@@ -112,7 +112,8 @@ static inline uint64_t rotate180(uint64_t board) {
 	return __builtin_bitreverse64(board) >> (64 - CHECKERS_NUM_SQUARES);
 }
 
-static inline uint64_t all_pieces(const uint64_t state[]) {
+static inline uint64_t
+all_pieces(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 	uint64_t all = 0;
 
 	for (uint64_t p = 0; p < CHECKERS_NUM_PLAYERS; p++)
@@ -121,11 +122,13 @@ static inline uint64_t all_pieces(const uint64_t state[]) {
 	return all;
 }
 
-static inline uint64_t opp_pieces(const uint64_t state[]) {
+static inline uint64_t
+opp_pieces(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 	return all_pieces(state) & ~state[STATE_OFFSET_BOARDS];
 }
 
-static bool piece_can_jump(const uint64_t state[], uint64_t piece) {
+static bool piece_can_jump(const uint64_t state[static CHECKERS_STATE_SIZE],
+                           uint64_t piece) {
 	const uint64_t own        = state[STATE_OFFSET_BOARDS];
 	const uint64_t opp        = opp_pieces(state);
 	const uint64_t empty      = ~(own | opp);
@@ -144,7 +147,7 @@ static bool piece_can_jump(const uint64_t state[], uint64_t piece) {
 	return false;
 }
 
-static bool has_any_move(const uint64_t state[]) {
+static bool has_any_move(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 	if (state[STATE_OFFSET_CONTINUATION])
 		return true;
 
@@ -181,7 +184,7 @@ static bool has_any_move(const uint64_t state[]) {
  * Jump-only variant of has_any_move(), used only to assert forced
  * captures in apply_action(). Compiled out with the asserts.
  */
-static bool has_any_jump(const uint64_t state[]) {
+static bool has_any_jump(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 	const uint64_t own   = state[STATE_OFFSET_BOARDS];
 	const uint64_t opp   = opp_pieces(state);
 	const uint64_t kings = state[STATE_OFFSET_KINGS] & own;
@@ -202,7 +205,8 @@ static bool has_any_jump(const uint64_t state[]) {
 }
 #endif
 
-static void checkers_init(const void* config, uint64_t state[]) {
+static void checkers_init(const void* config,
+                          uint64_t state[static CHECKERS_STATE_SIZE]) {
 	(void)config; // Unused
 
 	for (size_t i = 0; i < CHECKERS_STATE_SIZE; i++)
@@ -217,17 +221,20 @@ static void checkers_init(const void* config, uint64_t state[]) {
 		state[STATE_OFFSET_BOARDS + p] = men_init[p];
 }
 
-static uint64_t checkers_get_current_player(const uint64_t state[]) {
+static uint64_t
+checkers_get_current_player(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 	return state[STATE_OFFSET_CURRENT_PLAYER];
 }
 
-static bool checkers_is_chance_node(const uint64_t state[]) {
+static bool
+checkers_is_chance_node(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 	(void)state;
 	return false;
 }
 
-static uint64_t checkers_get_valid_actions(const uint64_t state[],
-                                           uint64_t actions_out[]) {
+static uint64_t checkers_get_valid_actions(
+        const uint64_t state[static CHECKERS_STATE_SIZE],
+        uint64_t actions_out[static CHECKERS_MAX_NUM_ACTIONS]) {
 	const uint64_t own   = state[STATE_OFFSET_BOARDS];
 	const uint64_t opp   = opp_pieces(state);
 	const uint64_t kings = state[STATE_OFFSET_KINGS];
@@ -290,9 +297,11 @@ static uint64_t checkers_get_valid_actions(const uint64_t state[],
 	return n;
 }
 
-static bool checkers_is_terminal(const uint64_t state[]);
+static bool
+checkers_is_terminal(const uint64_t state[static CHECKERS_STATE_SIZE]);
 
-static void checkers_apply_action(uint64_t state[], uint64_t action) {
+static void checkers_apply_action(uint64_t state[static CHECKERS_STATE_SIZE],
+                                  uint64_t action) {
 	assert(!checkers_is_terminal(state));
 
 	const uint64_t sq  = action / CHECKERS_NUM_DIRS;
@@ -386,12 +395,15 @@ static void checkers_apply_action(uint64_t state[], uint64_t action) {
 	state[STATE_OFFSET_KINGS] = rotate180(state[STATE_OFFSET_KINGS]);
 }
 
-static bool checkers_is_terminal(const uint64_t state[]) {
+static bool
+checkers_is_terminal(const uint64_t state[static CHECKERS_STATE_SIZE]) {
 	return state[STATE_OFFSET_QUIET_PLIES] >= DRAW_PLIES ||
 	       !has_any_move(state);
 }
 
-static void checkers_get_outcome(const uint64_t state[], int64_t scores_out[]) {
+static void
+checkers_get_outcome(const uint64_t state[static CHECKERS_STATE_SIZE],
+                     int64_t scores_out[static CHECKERS_NUM_PLAYERS]) {
 	assert(checkers_is_terminal(state));
 
 	if (!has_any_move(state)) {
@@ -415,11 +427,11 @@ static void checkers_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 		scores_out[p] = 0;
 }
 
-static void checkers_get_observation(const uint64_t state[], uint64_t player,
-                                     uint64_t* obs_out) {
-	assert(state != NULL);
+static void
+checkers_get_observation(const uint64_t state[static CHECKERS_STATE_SIZE],
+                         uint64_t player,
+                         uint64_t obs_out[static CHECKERS_OBS_SIZE]) {
 	assert(player < CHECKERS_NUM_PLAYERS);
-	assert(obs_out != NULL);
 	(void)player;
 
 	const uint64_t kings = state[STATE_OFFSET_KINGS];
@@ -445,9 +457,10 @@ static void checkers_get_observation(const uint64_t state[], uint64_t player,
 	        state[STATE_OFFSET_QUIET_PLIES];
 }
 
-static void checkers_get_features(const uint64_t state[], uint64_t player,
-                                  float* features_out) {
-	assert(features_out != NULL);
+static void
+checkers_get_features(const uint64_t state[static CHECKERS_STATE_SIZE],
+                      uint64_t player,
+                      float features_out[static CHECKERS_FEATURES_SIZE]) {
 	uint64_t obs[CHECKERS_OBS_SIZE];
 	checkers_get_observation(state, player, obs);
 
@@ -477,14 +490,15 @@ static void checkers_get_features(const uint64_t state[], uint64_t player,
 static const char man_chars[CHECKERS_NUM_PLAYERS]  = { 'b', 'w' };
 static const char king_chars[CHECKERS_NUM_PLAYERS] = { 'B', 'W' };
 
-static inline uint64_t board_to_display(const uint64_t state[],
-                                        uint64_t board) {
+static inline uint64_t
+board_to_display(const uint64_t state[static CHECKERS_STATE_SIZE],
+                 uint64_t board) {
 	return state[STATE_OFFSET_CURRENT_PLAYER] == 0 ? board
 	                                               : rotate180(board);
 }
 
-static inline char square_char(const uint64_t state[], uint64_t row,
-                               uint64_t col) {
+static inline char square_char(const uint64_t state[static CHECKERS_STATE_SIZE],
+                               uint64_t row, uint64_t col) {
 	if ((row + col) % 2 != 0)
 		return ' '; // light square: never occupied
 
@@ -505,9 +519,10 @@ static inline char square_char(const uint64_t state[], uint64_t row,
 	return '.';
 }
 
-static uint64_t checkers_to_string(const uint64_t state[], uint64_t buf_size,
-                                   char* buf) {
-	assert(buf != NULL);
+static uint64_t
+checkers_to_string(const uint64_t state[static CHECKERS_STATE_SIZE],
+                   uint64_t buf_size,
+                   char buf[static CHECKERS_STRING_BUF_SIZE]) {
 	assert(buf_size >= CHECKERS_STRING_BUF_SIZE);
 
 	char* const start     = buf;
