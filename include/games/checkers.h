@@ -75,9 +75,9 @@
 #define CHECKERS_NUM_DIRS 4
 
 #define CHECKERS_MEN_ROWS ((CHECKERS_NUM_ROWS - 2) / 2)
-#define CHECKERS_NUM_MEN                               \
-	(CHECKERS_MEN_ROWS * (CHECKERS_NUM_COLS / 2) + \
-	 (CHECKERS_MEN_ROWS + 1) / 2 * (CHECKERS_NUM_COLS % 2))
+#define CHECKERS_NUM_MEN                             \
+	(CHECKERS_MEN_ROWS * (CHECKERS_NUM_COLS / 2) \
+	 + (CHECKERS_MEN_ROWS + 1) / 2 * (CHECKERS_NUM_COLS % 2))
 
 // At most every man × every direction can be simultaneously legal
 #define CHECKERS_MAX_NUM_DECISION_ACTIONS (CHECKERS_NUM_MEN * CHECKERS_NUM_DIRS)
@@ -103,9 +103,9 @@
  */
 #define CHECKERS_MAX_IRREVERSIBLE_PLIES \
 	(2 * CHECKERS_NUM_MEN * (CHECKERS_NUM_ROWS - 1) + 2 * CHECKERS_NUM_MEN)
-#define CHECKERS_MAX_TURNS                                             \
-	((CHECKERS_MAX_IRREVERSIBLE_PLIES + 1) * CHECKERS_DRAW_PLIES + \
-	 CHECKERS_MAX_IRREVERSIBLE_PLIES)
+#define CHECKERS_MAX_TURNS                                           \
+	((CHECKERS_MAX_IRREVERSIBLE_PLIES + 1) * CHECKERS_DRAW_PLIES \
+	 + CHECKERS_MAX_IRREVERSIBLE_PLIES)
 
 /**
  * 8×8 draughts has ~5 × 10^20 reachable positions (Schaeffer et al.'s

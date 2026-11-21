@@ -42,7 +42,8 @@ static void ttt_init(const void* config,
 	state[STATE_OFFSET_CURRENT_PLAYER] = 0;
 
 	for (size_t p = STATE_OFFSET_BOARD;
-	     p < STATE_OFFSET_BOARD + TTT_NUM_PLAYERS; p++)
+	     p < STATE_OFFSET_BOARD + TTT_NUM_PLAYERS;
+	     p++)
 		state[p] = 0; // Empty bitboard
 }
 
@@ -132,6 +133,7 @@ static void ttt_get_outcome(const uint64_t state[static TTT_STATE_SIZE],
 			// rest are losers
 			for (size_t p = 0; p < TTT_NUM_PLAYERS; p++)
 				scores_out[p] = (p == player) ? 1 : -1;
+
 			return;
 		}
 	}

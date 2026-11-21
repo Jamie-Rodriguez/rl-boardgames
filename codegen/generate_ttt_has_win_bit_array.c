@@ -57,10 +57,9 @@ int main(int argc, char* argv[]) {
 	      stdout);
 
 	printf("static const uint64_t has_win_bits[%u] = {\n", HAS_WIN_LEN);
-	for (size_t i = 0; i < HAS_WIN_LEN; ++i) {
+	for (size_t i = 0; i < HAS_WIN_LEN; i++)
 		printf("\tUINT64_C(0x%016" PRIx64 ")%s\n", has_win_bits[i],
 		       i + 1u < HAS_WIN_LEN ? "," : "");
-	}
 
 	fputs("};\n\n"
 	      "static inline bool ttt_check_win(ttt_bitboard b) {\n"
@@ -78,6 +77,7 @@ int main(int argc, char* argv[]) {
 		fputs("Failed to write generated header "
 		      "ttt_has_win_bit_array.h\n",
 		      stderr);
+
 		return 1;
 	}
 	return 0;

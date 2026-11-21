@@ -53,9 +53,10 @@ static const char player_to_piece[] = { ' ', 'O', 'X' };
  *
  *         . . . . . . .
  * row 5   * . . . . . .
- * row 4   . @ . . . . .        # = b          (the four stones)
- * row 3   . . @ . . . .        * = b >> 6     (same stones, slid one step
- * up-left) row 2   . . . @ . . .        @ = both  →  m row 1   . . . . # . .
+ * row 4   . @ . . . . .        # = b              (the four stones)
+ * row 3   . . @ . . . .        * = b >> 6         (same stones, slid one step
+ * row 2   . . . @ . . .        @ = both  →  m      up-left)
+ * row 1   . . . . # . .
  * row 0   . . . . . . .
  *         0 1 2 3 4 5 6
  *
@@ -182,6 +183,7 @@ static void c4_get_outcome(const uint64_t state[static C4_STATE_SIZE],
 			// Connect-4 is zero-sum: one winner, the rest lose
 			for (uint64_t q = 0; q < C4_NUM_PLAYERS; q++)
 				scores_out[q] = (q == p) ? 1 : -1;
+
 			return;
 		}
 	}
@@ -199,14 +201,14 @@ static void c4_get_observation(const uint64_t state[static C4_STATE_SIZE],
 	size_t i = 0;
 
 	for (uint64_t p = 0; p < C4_NUM_PLAYERS; p++) {
-		const uint64_t board = state[STATE_OFFSET_BOARDS +
-		                             ((player + p) % C4_NUM_PLAYERS)];
+		const uint64_t board = state[STATE_OFFSET_BOARDS
+		                             + ((player + p) % C4_NUM_PLAYERS)];
 
 		for (uint64_t r = 0; r < C4_NUM_ROWS; r++)
 			for (uint64_t c = 0; c < C4_NUM_COLS; c++)
-				obs_out[i++] = (uint64_t)((board >>
-				                           (c * COL_BITS + r)) &
-				                          1);
+				obs_out[i++] =
+				        (uint64_t)((board >> (c * COL_BITS + r))
+				                   & 1);
 	}
 
 	assert(i == C4_OBS_SIZE);
@@ -250,6 +252,7 @@ static uint64_t c4_to_string(const uint64_t state[static C4_STATE_SIZE],
 
 	n = snprintf(buf, remaining, "Player %u (%c) to move\n",
 	             (unsigned)(player + 1), player_to_piece[player + 1]);
+
 	if (n > 0 && (size_t)n < remaining) {
 		buf += n;
 		remaining -= (size_t)n;
@@ -259,6 +262,7 @@ static uint64_t c4_to_string(const uint64_t state[static C4_STATE_SIZE],
 		for (uint64_t col = 0; col < C4_NUM_COLS; col++) {
 			n = snprintf(buf, remaining, " %c",
 			             piece_at(state, col * COL_BITS + row));
+
 			if (n > 0 && (size_t)n < remaining) {
 				buf += n;
 				remaining -= (size_t)n;
@@ -266,6 +270,7 @@ static uint64_t c4_to_string(const uint64_t state[static C4_STATE_SIZE],
 		}
 
 		n = snprintf(buf, remaining, "\n");
+
 		if (n > 0 && (size_t)n < remaining) {
 			buf += n;
 			remaining -= (size_t)n;
@@ -273,6 +278,7 @@ static uint64_t c4_to_string(const uint64_t state[static C4_STATE_SIZE],
 	}
 
 	n = snprintf(buf, remaining, " 0 1 2 3 4 5 6\n");
+
 	if (n > 0 && (size_t)n < remaining)
 		buf += n;
 

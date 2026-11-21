@@ -151,9 +151,9 @@ static inline bool
 is_natural_blackjack(const uint64_t state[static BJ_STATE_SIZE]) {
 	const uint64_t* hand = hand_cptr(state, 0);
 
-	return state[STATE_OFFSET_NUM_HANDS] == 1 && hand[HAND_NCARDS] == 2 &&
-	       (hand[HAND_FLAGS] & HAND_FLAG_SPLIT) == 0 &&
-	       hand_best_total(hand) == 21;
+	return state[STATE_OFFSET_NUM_HANDS] == 1 && hand[HAND_NCARDS] == 2
+	       && (hand[HAND_FLAGS] & HAND_FLAG_SPLIT) == 0
+	       && hand_best_total(hand) == 21;
 }
 
 static inline uint64_t
@@ -164,8 +164,8 @@ dealer_best_total(const uint64_t state[static BJ_STATE_SIZE]) {
 
 static inline bool
 dealer_is_blackjack(const uint64_t state[static BJ_STATE_SIZE]) {
-	return state[STATE_OFFSET_DEALER_NCARDS] == 2 &&
-	       dealer_best_total(state) == 21;
+	return state[STATE_OFFSET_DEALER_NCARDS] == 2
+	       && dealer_best_total(state) == 21;
 }
 
 static inline bool dealer_must_hit(const uint64_t state[static BJ_STATE_SIZE]) {
@@ -234,8 +234,8 @@ static void enter_dealer_phase(uint64_t state[static BJ_STATE_SIZE]) {
 	for (uint64_t h = 0; h < state[STATE_OFFSET_NUM_HANDS]; h++) {
 		const uint64_t* hand = hand_cptr(state, h);
 
-		if ((hand[HAND_FLAGS] & HAND_FLAG_SURRENDERED) == 0 &&
-		    !hand_is_bust(hand)) {
+		if ((hand[HAND_FLAGS] & HAND_FLAG_SURRENDERED) == 0
+		    && !hand_is_bust(hand)) {
 			any_hands_live = true;
 			break;
 		}
@@ -265,8 +265,8 @@ static void finish_hand_and_advance(uint64_t state[static BJ_STATE_SIZE]) {
 
 	if (state[STATE_OFFSET_CUR_HAND] < state[STATE_OFFSET_NUM_HANDS]) {
 		assert(hand_cptr(state,
-		                 state[STATE_OFFSET_CUR_HAND])[HAND_NCARDS] ==
-		       1);
+		                 state[STATE_OFFSET_CUR_HAND])[HAND_NCARDS]
+		       == 1);
 
 		state[STATE_OFFSET_PHASE] = PHASE_PLAYER_DRAW;
 		return;
@@ -320,7 +320,8 @@ blackjack_get_valid_actions(const uint64_t state[static BJ_STATE_SIZE],
 		uint64_t n = 0;
 
 		for (uint64_t r = 0; r < NUM_RANKS; r++)
-			for (uint64_t c = 0; c < state[STATE_OFFSET_SHOE + r];
+			for (uint64_t c = 0;
+			     c < state[STATE_OFFSET_SHOE + r];
 			     c++)
 				actions_out[n++] = r;
 
@@ -354,8 +355,8 @@ blackjack_get_valid_actions(const uint64_t state[static BJ_STATE_SIZE],
 	 * NUM_HANDS > 1 and nothing ever decrements it, but keeping it in for
 	 * completeness.)
 	 */
-	if (state[STATE_OFFSET_NUM_HANDS] == 1 && hand[HAND_NCARDS] == 2 &&
-	    (hand[HAND_FLAGS] & HAND_FLAG_SPLIT) == 0)
+	if (state[STATE_OFFSET_NUM_HANDS] == 1 && hand[HAND_NCARDS] == 2
+	    && (hand[HAND_FLAGS] & HAND_FLAG_SPLIT) == 0)
 		actions_out[n++] = BJ_ACTION_SURRENDER;
 
 	return n;
@@ -415,13 +416,13 @@ static void apply_chance_action(uint64_t state[static BJ_STATE_SIZE],
 
 		// Split aces receive exactly one card
 		const bool split_ace_fill =
-		        (hand[HAND_FLAGS] & HAND_FLAG_SPLIT) != 0 &&
-		        hand[HAND_NCARDS] == 2 &&
-		        hand[HAND_CARD1] == RANK_ACE + 1;
+		        (hand[HAND_FLAGS] & HAND_FLAG_SPLIT) != 0
+		        && hand[HAND_NCARDS] == 2
+		        && hand[HAND_CARD1] == RANK_ACE + 1;
 
-		if (split_ace_fill || hand_is_bust(hand) ||
-		    hand_best_total(hand) == 21 ||
-		    (hand[HAND_FLAGS] & HAND_FLAG_DOUBLED) != 0) {
+		if (split_ace_fill || hand_is_bust(hand)
+		    || hand_best_total(hand) == 21
+		    || (hand[HAND_FLAGS] & HAND_FLAG_DOUBLED) != 0) {
 			finish_hand_and_advance(state);
 			return;
 		}
@@ -512,8 +513,8 @@ static void apply_decision_action(uint64_t state[static BJ_STATE_SIZE],
 
 static void blackjack_apply_action(uint64_t state[static BJ_STATE_SIZE],
                                    uint64_t action) {
-	assert(state[STATE_OFFSET_PHASE] != PHASE_DONE &&
-	       "apply_action() called on a terminal state");
+	assert(state[STATE_OFFSET_PHASE] != PHASE_DONE
+	       && "apply_action() called on a terminal state");
 
 	if (blackjack_is_chance_node(state)) {
 		apply_chance_action(state, action);
@@ -639,8 +640,8 @@ blackjack_get_observation(const uint64_t state[static BJ_STATE_SIZE],
 #define FEATURES_HAND_DOUBLED    5 // 1 if doubled down, else 0
 #define FEATURES_HAND_NUM_FIELDS (FEATURES_HAND_DOUBLED + 1)
 
-#if FEATURES_HANDS_OFFSET != BJ_FEATURES_FIXED_FIELDS || \
-        FEATURES_HAND_NUM_FIELDS != BJ_FEATURES_FIELDS_PER_HAND
+#if FEATURES_HANDS_OFFSET != BJ_FEATURES_FIXED_FIELDS \
+        || FEATURES_HAND_NUM_FIELDS != BJ_FEATURES_FIELDS_PER_HAND
 #error "Features layout disagrees with BJ_FEATURES_* in blackjack.h"
 #endif
 
@@ -668,8 +669,8 @@ blackjack_get_features(const uint64_t state[static BJ_STATE_SIZE],
 		const uint64_t hard  = hand[HAND_TOTAL];
 		const uint64_t best  = hand_best_total(hand);
 		float* hand_features =
-		        &features_out[FEATURES_HANDS_OFFSET +
-			              h * FEATURES_HAND_NUM_FIELDS];
+			&features_out[FEATURES_HANDS_OFFSET
+			              + h * FEATURES_HAND_NUM_FIELDS];
 
 		/**
 		 * Clamp: busts exceed 21 (the bust flag tells them apart from a
@@ -707,9 +708,9 @@ static char rank_char(uint64_t card) {
  * instead of being overwritten by later chunks.
  */
 static void advance(char** buf, size_t* remaining, int n) {
-	const size_t written = (n < 0)                    ? 0
-	                       : ((size_t)n < *remaining) ? (size_t)n
-	                                                  : *remaining - 1;
+	const size_t written = (n < 0)                  ? 0
+	                     : ((size_t)n < *remaining) ? (size_t)n
+	                                                : *remaining - 1;
 
 	*buf += written;
 	*remaining -= written;
@@ -741,8 +742,8 @@ static uint64_t blackjack_to_string(const uint64_t state[static BJ_STATE_SIZE],
 		break;
 	case PHASE_PLAYER_DRAW:
 		n = snprintf(buf, remaining, "Awaiting card for hand %llu\n",
-		             (unsigned long long)state[STATE_OFFSET_CUR_HAND] +
-		                     1);
+		             (unsigned long long)state[STATE_OFFSET_CUR_HAND]
+		                     + 1);
 		break;
 	case PHASE_DEALER_DRAW:
 		n = snprintf(buf, remaining, "Awaiting dealer card\n");
