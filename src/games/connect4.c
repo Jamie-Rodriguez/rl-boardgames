@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <assert.h>
 #include <stdio.h>
-#include "connect4.h"
+#include "games/connect4.h"
 
 /**
  * State layout:

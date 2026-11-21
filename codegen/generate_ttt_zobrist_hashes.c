@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <inttypes.h>
 #include "prng.h"
-#include "tic_tac_toe.h"
+#include "games/tic_tac_toe.h"
 
 int main(int argc, char* argv[]) {
 	uint64_t seed = 0xC0010FFF0CACC1AULL;

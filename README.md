@@ -45,7 +45,7 @@ This is intended as a way to demo or smoke-test the game engine you are implemen
 Engine Structure
 ================
 
-Each game must completely fulfil the `Game` interface located at [include/board_game.h](include/board_game.h). This allows for the following generic game loop:
+Each game must completely fulfil the `Game` interface located at [include/games/board_game.h](include/games/board_game.h). This allows for the following generic game loop:
 
 Deterministic Games
 -------------------
@@ -88,7 +88,7 @@ See also [src/main.c](src/main.c) for a working example.
 The `Game` Interface
 ====================
 
-The `Game` struct (defined in [include/board_game.h](include/board_game.h)) is a vtable of function pointers and metadata that every game implementation must provide. All state is stored externally in a caller-allocated `uint64_t` array - the `Game` itself holds no mutable state.
+The `Game` struct (defined in [include/games/board_game.h](include/games/board_game.h)) is a vtable of function pointers and metadata that every game implementation must provide. All state is stored externally in a caller-allocated `uint64_t` array - the `Game` itself holds no mutable state.
 
 **Note** that state is intended as a semi-opaque container for the game state. Agents are expected to observe the state of the game via the `get_observation()` or `get_features()` functions - not by inspecting the state directly! This is because some board games such as Liar's Dice or Poker are incomplete/hidden information games, so their state arrays will contain the **entire** information of the game state, which is not available to each player. `get_observation()` and `get_features()` expose only the information that a specific player should see.
 

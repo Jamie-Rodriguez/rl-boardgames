@@ -4,13 +4,13 @@
 #include <time.h>
 #include <stdbool.h>
 #include <inttypes.h>
-#include "board_game.h"
+#include "games/board_game.h"
 #include "prng.h"
-#include "tic_tac_toe.h"
-#include "pig.h"
-#include "blackjack.h"
-#include "connect4.h"
-#include "checkers.h"
+#include "games/tic_tac_toe.h"
+#include "games/pig.h"
+#include "games/blackjack.h"
+#include "games/connect4.h"
+#include "games/checkers.h"
 
 static int handle_args(int argc, char* argv[], const Game* game) {
 	if (argc <= 1)

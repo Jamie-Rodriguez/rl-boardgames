@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <assert.h>
 #include <stdio.h>
-#include "checkers.h"
+#include "games/checkers.h"
 
 
 // Plies/moves without a capture or man move before the game is drawn

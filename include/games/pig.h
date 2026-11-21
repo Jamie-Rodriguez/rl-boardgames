@@ -1,7 +1,7 @@
 #ifndef PIG_H
 #define PIG_H
 
-#include "board_game.h"
+#include "games/board_game.h"
 
 #define PIG_NUM_PLAYERS 2
 #define PIG_TARGET      100
