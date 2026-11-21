@@ -13,7 +13,7 @@
 
 #define STATE_OFFSET_CURRENT_PLAYER 0
 #define STATE_OFFSET_BOARD          1
-#define STATE_SIZE                  (STATE_OFFSET_BOARD + BOARD_SIZE)
+#define STATE_SIZE                  (1 + NUM_PLAYERS)
 
 /**
  * Note `observation` shape is the same as the `features` shape for this
@@ -29,24 +29,23 @@
 /**
  * `state` shape:
  *
- * index:         0         1 ... 9
- *        +----------------+-------+
- *        | current player | board |
- *        +----------------+-------+
+ * index:      0         1          2
+ *        +---------+----------+----------+
+ *        | current |    p1    |    p2    |
+ *        | player  | bitboard | bitboard |
+ *        +---------+----------+----------+
  *
  * [0]:    current player (zero-based)
- * 	0 = player 1, 1 = player 2
- * [1..9]: flattened 1D board,
- *         starting at bottom-left, going across each row
- * 	0 = empty square, 1 = player 1, 2 = player 2
+ * 	       0 = player 1, 1 = player 2
+ * [1..2]: per-player bitboards (bits 0..8),
  *
  * 	          col 0  col 1  col 2
  * 	        +------+------+------+
- * 	row 2   | s[7] | s[8] | s[9] |
+ * 	row 2   |  b6  |  b7  |  b8  |
  * 	        +------+------+------+
- * 	row 1   | s[4] | s[5] | s[6] |
+ * 	row 1   |  b3  |  b4  |  b5  |
  * 	        +------+------+------+
- * 	row 0   | s[1] | s[2] | s[3] |
+ * 	row 0   |  b0  |  b1  |  b2  |
  * 	        +------+------+------+
  */
 
@@ -60,6 +59,8 @@
     1                                    \
 )
 
+#define FULL_BOARD ((1U << BOARD_SIZE) - 1U)
+
 static const char player_to_piece[] = { ' ', 'O', 'X' };
 
 static void ttt_init(const void* config, uint64_t state[]) {
@@ -68,8 +69,8 @@ static void ttt_init(const void* config, uint64_t state[]) {
 	// Initialise state
 	state[STATE_OFFSET_CURRENT_PLAYER] = 0;
 
-	for (size_t i = STATE_OFFSET_BOARD; i < STATE_OFFSET_BOARD + BOARD_SIZE;
-	     i++)
+	for (size_t i = STATE_OFFSET_BOARD;
+	     i < STATE_OFFSET_BOARD + NUM_PLAYERS; i++)
 		state[i] = EMPTY_PIECE;
 }
 
@@ -79,40 +80,36 @@ static uint64_t ttt_get_current_player(const uint64_t state[]) {
 
 static uint64_t ttt_get_valid_actions(const uint64_t state[],
                                       uint64_t actions_out[]) {
-	size_t action_index = 0;
+	ttt_bitboard occupied = 0;
+
+	for (size_t p = 0; p < NUM_PLAYERS; p++)
+		occupied |= (ttt_bitboard)state[STATE_OFFSET_BOARD + p];
+
+	const ttt_bitboard empty = (ttt_bitboard)~occupied & FULL_BOARD;
+
+	size_t action_count = 0;
 
 	for (size_t i = 0; i < BOARD_SIZE; i++)
-		if (state[STATE_OFFSET_BOARD + i] == EMPTY_PIECE)
-			actions_out[action_index++] = i;
+		if (empty & ((ttt_bitboard)1 << i))
+			actions_out[action_count++] = i;
 
-	return action_index;
+	return action_count;
 }
-
 
 static void ttt_apply_action(uint64_t state[], uint64_t action) {
-	assert(__builtin_popcountll(action) == 1);
-	assert(state[action] == EMPTY_PIECE);
 	assert(action < BOARD_SIZE);
 
-	state[STATE_OFFSET_BOARD + action] =
-	        state[STATE_OFFSET_CURRENT_PLAYER] + 1;
-	state[STATE_OFFSET_CURRENT_PLAYER] =
-	        (state[STATE_OFFSET_CURRENT_PLAYER] + 1) % NUM_PLAYERS;
-}
+	ttt_bitboard occupied = 0;
 
+	for (size_t p = 0; p < NUM_PLAYERS; p++)
+		occupied |= (ttt_bitboard)state[STATE_OFFSET_BOARD + p];
 
-static void ttt_state_to_bitboards(const uint64_t state[],
-                                   ttt_bitboard bitboards_out[]) {
-	memset(bitboards_out, 0, sizeof(ttt_bitboard) * NUM_PLAYERS);
+	assert(!(occupied & ((ttt_bitboard)1 << action)));
+	(void)occupied;
 
-	size_t bit_pos = 0;
-
-	for (size_t i = STATE_OFFSET_BOARD; i < STATE_SIZE; i++, bit_pos++) {
-		const uint64_t piece = state[i];
-
-		if (piece != EMPTY_PIECE)
-			bitboards_out[piece - 1] |= (ttt_bitboard)1 << bit_pos;
-	}
+	const uint64_t player = state[STATE_OFFSET_CURRENT_PLAYER];
+	state[STATE_OFFSET_BOARD + player] |= (ttt_bitboard)1 << action;
+	state[STATE_OFFSET_CURRENT_PLAYER] = (player + 1) % NUM_PLAYERS;
 }
 
 static inline bool ttt_check_win(ttt_bitboard b) {
@@ -120,12 +117,10 @@ static inline bool ttt_check_win(ttt_bitboard b) {
 }
 
 static bool ttt_is_terminal(const uint64_t state[]) {
-	ttt_bitboard bitboards[NUM_PLAYERS] = { 0 };
-	ttt_state_to_bitboards(state, bitboards);
-
 	// Check for a winning streak
 	for (size_t player = 0; player < NUM_PLAYERS; player++)
-		if (ttt_check_win(bitboards[player]))
+		if (ttt_check_win(
+		            (ttt_bitboard)state[STATE_OFFSET_BOARD + player]))
 			return true;
 
 	// No wins found, but the game could still be over due to the board
@@ -133,11 +128,9 @@ static bool ttt_is_terminal(const uint64_t state[]) {
 	ttt_bitboard occupied = 0;
 
 	for (size_t player = 0; player < NUM_PLAYERS; player++)
-		occupied |= bitboards[player];
+		occupied |= (ttt_bitboard)state[STATE_OFFSET_BOARD + player];
 
-	const ttt_bitboard full = 0x1FF; // 0b111111111
-
-	if (occupied == full)
+	if (occupied == FULL_BOARD)
 		return true;
 
 	return false;
@@ -145,11 +138,9 @@ static bool ttt_is_terminal(const uint64_t state[]) {
 
 
 static void ttt_get_outcome(const uint64_t state[], int64_t scores_out[]) {
-	ttt_bitboard bitboards[NUM_PLAYERS] = { 0 };
-	ttt_state_to_bitboards(state, bitboards);
-
 	for (size_t player = 0; player < NUM_PLAYERS; player++) {
-		if (ttt_check_win(bitboards[player])) {
+		if (ttt_check_win(
+		            (ttt_bitboard)state[STATE_OFFSET_BOARD + player])) {
 			// Tic-Tac-Toe is a zero-sum game
 			// i.e. For a win, there's only one winner - the
 			// rest are losers
@@ -168,12 +159,12 @@ static void ttt_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 static void ttt_get_observation(const uint64_t state[], uint64_t player,
                                 uint8_t* obs_out) {
 	for (size_t p = 0; p < NUM_PLAYERS; p++) {
-		uint64_t piece = ((player + p) % NUM_PLAYERS) + 1;
+		uint64_t board_player = (player + p) % NUM_PLAYERS;
+		ttt_bitboard bb =
+		        (ttt_bitboard)state[STATE_OFFSET_BOARD + board_player];
 
 		for (size_t i = 0; i < BOARD_SIZE; i++)
-			obs_out[p * BOARD_SIZE + i] =
-			        (state[STATE_OFFSET_BOARD + i] == piece) ? 1
-			                                                 : 0;
+			obs_out[p * BOARD_SIZE + i] = (bb >> i) & 1;
 	}
 }
 
@@ -184,6 +175,17 @@ static void ttt_get_features(const uint64_t state[], uint64_t player,
 
 	for (size_t i = 0; i < OBS_SIZE; i++)
 		features_out[i] = (float)obs[i];
+}
+
+static inline char ttt_piece_at(const uint64_t state[], size_t square) {
+	const ttt_bitboard square_bitmask = (ttt_bitboard)(1 << square);
+
+	for (size_t player = 0; player < NUM_PLAYERS; player++)
+		if (state[STATE_OFFSET_BOARD + player] & square_bitmask)
+			return player_to_piece[player + 1];
+
+	// Empty piece
+	return player_to_piece[0];
 }
 
 static uint64_t ttt_to_string(const uint64_t state[], uint64_t buf_size,
@@ -217,8 +219,7 @@ static uint64_t ttt_to_string(const uint64_t state[], uint64_t buf_size,
 			}
 
 			*buf++ = ' ';
-			*buf++ = player_to_piece[state[STATE_OFFSET_BOARD +
-			                               row * NUM_COLS + col]];
+			*buf++ = ttt_piece_at(state, row * NUM_COLS + col);
 		}
 
 		*buf++ = '\n';
