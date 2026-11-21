@@ -1,5 +1,4 @@
 #include <stddef.h>
-#include <string.h>
 #include <assert.h>
 #include <stdio.h>
 #include "tic_tac_toe.h"

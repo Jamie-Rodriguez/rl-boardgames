@@ -15,7 +15,7 @@
  */
 #define C4_STATE_SIZE 3
 
-/*
+/**
  * Actions are column indices (0..6, left to right).
  * A column is a valid action while its top playable cell (row 5) is empty.
  * Connect-4 is deterministic: every action is a decision action.
