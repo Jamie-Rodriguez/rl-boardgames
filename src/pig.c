@@ -33,14 +33,6 @@
 #define PIG_NUM_DIE_FACES 6
 
 /**
- * Decision actions (valid when it is a player's turn to decide):
- * 	PIG_ACTION_HOLD - bank the turn total and end the turn
- * 	PIG_ACTION_ROLL - roll the die (transitions to a chance node)
- */
-#define PIG_ACTION_HOLD 0
-#define PIG_ACTION_ROLL 1
-
-/**
  * The dice "player" is assigned the last index `PIG_NUM_PLAYERS`. When
  * `get_current_player()` returns this value, the caller is responsible
  * for sampling a uniformly random dice face (action ID ∈ {0..5}) and passing
