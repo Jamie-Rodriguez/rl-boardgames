@@ -166,11 +166,6 @@ typedef struct Game {
 	 * Note: Only the first `FEATURES_NDIMS` elements are meaningful.
 	 */
 	uint64_t features_dims[4];
-	/**
-	 * TO-DO:
-	 * Zobrist hashing function:
-	 * 	uint64_t (*hash)(const uint64_t state[])
-	 */
 } Game;
 
 #endif

@@ -78,14 +78,18 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(BUILDDIR)
 # ── Codegen rules (convention: codegen/generate_foo.c → build/foo.h) ─────────
 # Build code-generators
 $(BUILDDIR)/generate_%: $(CODEGENDIR)/generate_%.c | $(BUILDDIR)
-	$(CC) -std=c99 -O2 -I$(INCDIR) -o $@ $<
+	$(CC) -std=c99 -O2 -I$(INCDIR) -o $@ $^
 
 # Run code-generators to produce their headers
 $(BUILDDIR)/%.h: $(BUILDDIR)/generate_%
 	$< > $@
 
+# Prerequisites for code-generators
+$(BUILDDIR)/generate_ttt_zobrist_hashes: $(SRCDIR)/prng.c
+
 # ── Per-file codegen dependencies (one line each) ────────────────────────────
 $(BUILDDIR)/tic_tac_toe.o: $(BUILDDIR)/ttt_has_win_bit_array.h
+$(BUILDDIR)/tic_tac_toe.o: $(BUILDDIR)/ttt_zobrist_hashes.h
 
 $(BUILDDIR) $(BINDIR):
 	mkdir -p $@
