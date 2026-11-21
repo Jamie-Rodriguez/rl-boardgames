@@ -19,6 +19,17 @@
  * 	- <NAMESPACE>_NUM_PLAYERS
  * 	- <NAMESPACE>_STATE_SIZE
  * 	- <NAMESPACE>_MAX_NUM_ACTIONS
+ * 		Maximum number of actions get_valid_actions() can return in
+ * 		*any* state - always the larger of the two macros below.
+ * 	- <NAMESPACE>_MAX_NUM_DECISION_ACTIONS
+ * 		Maximum possible actions returned at a *decision* node. Most
+ * 		agents only ever see decision nodes - so an agent's action
+ * 		buffer *usually* only needs this size. Agents that expand
+ * 		chance nodes themselves (e.g. MCTS) must size for
+ * 		MAX_NUM_ACTIONS instead.
+ * 	- <NAMESPACE>_MAX_NUM_CHANCE_ACTIONS
+ * 		Maximum actions returned at a *chance* node
+ * 		(0 for deterministic games).
  * 	- <NAMESPACE>_STRING_BUF_SIZE
  * 		Minimum buffer size (including null terminator) that the
  * 		caller must allocate for `to_string()`.

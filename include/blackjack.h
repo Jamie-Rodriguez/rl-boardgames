@@ -115,16 +115,11 @@
 #define BLACKJACK_ACTION_SPLIT     3
 #define BLACKJACK_ACTION_SURRENDER 4
 
-/**
- * Max across all state types:
- * 	- Decision nodes: at most 5 actions
- * 	  (STAND, HIT, DOUBLE, SPLIT, SURRENDER)
- * 	- Chance nodes: one action entry *per remaining physical card*.
- * 	  Entries are duplicated per rank so that a uniform sample over the
- * 	  action array reproduces draw-without-replacement from the shoe -
- * 	  bounded by the full shoe size.
- */
-#define BLACKJACK_MAX_NUM_ACTIONS BLACKJACK_SHOE_SIZE
+/* STAND, HIT, DOUBLE, SPLIT SURRENDER */
+#define BLACKJACK_MAX_NUM_DECISION_ACTIONS 5
+/* The remaining cards in the shoe */
+#define BLACKJACK_MAX_NUM_CHANCE_ACTIONS   BLACKJACK_SHOE_SIZE
+#define BLACKJACK_MAX_NUM_ACTIONS          BLACKJACK_MAX_NUM_CHANCE_ACTIONS
 
 /**
  * Observation: flat uint8 vector, from the player's perspective. The dealer's
