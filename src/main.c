@@ -8,6 +8,7 @@
 #include "tic_tac_toe.h"
 #include "pig.h"
 #include "blackjack.h"
+#include "connect4.h"
 
 static int handle_args(int argc, char* argv[], const Game* game) {
 	if (argc <= 1)
@@ -328,6 +329,52 @@ int main_blackjack(int argc, char* argv[]) {
 		       score > 0   ? "player wins"
 		       : score < 0 ? "player loses"
 		                   : "push");
+
+	return 0;
+}
+
+int main_connect4(int argc, char* argv[]) {
+	const Game* game = &connect4;
+
+	const int status = handle_args(argc, argv, game);
+	if (status >= 0)
+		return status;
+
+	uint64_t state[C4_STATE_SIZE]         = { 0 };
+	uint64_t actions[C4_MAX_NUM_ACTIONS]  = { 0 };
+	char state_output[C4_STRING_BUF_SIZE] = { 0 };
+
+	printf("%s\n", game->help_prompt());
+
+	game->init(NULL, state);
+
+	game->to_string(state, C4_STRING_BUF_SIZE, state_output);
+	printf("\n%s\n", state_output);
+
+	// Connect-4 is fully deterministic: no chance nodes, no PRNG
+	while (!game->is_terminal(state)) {
+		uint64_t num_actions = game->get_valid_actions(state, actions);
+		uint64_t current_player = game->get_current_player(state);
+
+		printf("Player %" PRIu64 "'s turn. Valid columns:",
+		       current_player + 1);
+		for (uint64_t i = 0; i < num_actions; i++)
+			printf(" %" PRIu64, actions[i]);
+		printf("\n");
+
+		uint64_t move;
+		if (!read_move(actions, num_actions, &move))
+			return 1;
+
+		game->apply_action(state, move);
+
+		game->to_string(state, C4_STRING_BUF_SIZE, state_output);
+		printf("\n%s\n", state_output);
+	}
+
+	int64_t scores[C4_NUM_PLAYERS];
+	game->get_outcome(state, scores);
+	print_scores_and_winner(scores, C4_NUM_PLAYERS);
 
 	return 0;
 }
