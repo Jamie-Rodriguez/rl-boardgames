@@ -50,6 +50,11 @@ static uint64_t ttt_get_current_player(const uint64_t state[]) {
 	return state[STATE_OFFSET_CURRENT_PLAYER];
 }
 
+static bool ttt_is_chance_node(const uint64_t state[]) {
+	(void)state;
+	return false;
+}
+
 static uint64_t ttt_get_valid_actions(const uint64_t state[],
                                       uint64_t actions_out[]) {
 	ttt_bitboard occupied = 0;
@@ -231,6 +236,7 @@ static const char* ttt_help_prompt(void) {
 const Game tic_tac_toe = {
 	.init               = ttt_init,
 	.get_current_player = ttt_get_current_player,
+	.is_chance_node     = ttt_is_chance_node,
 	.get_valid_actions  = ttt_get_valid_actions,
 	.apply_action       = ttt_apply_action,
 	.is_terminal        = ttt_is_terminal,
