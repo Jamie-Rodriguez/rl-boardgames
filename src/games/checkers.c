@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "games/checkers.h"
+#include "utils.h"
 
 
 // Local alias of the draw budget exported by checkers.h
@@ -30,15 +31,12 @@
 
 /**
  * The 180-degree rotation maps square (r, c) to
- * (CHECKERS_NUM_ROWS - 1 - r, CHECKERS_NUM_COLS - 1 - c), which preserves square colour only when
- * the two dimensions have equal parity
+ * (CHECKERS_NUM_ROWS - 1 - r, CHECKERS_NUM_COLS - 1 - c), which preserves
+ * square colour only when the two dimensions have equal parity
  */
 #if (CHECKERS_NUM_ROWS + CHECKERS_NUM_COLS) % 2 != 0
 #error "The 180-degree rotation must map dark squares to dark squares"
 #endif
-
-// All observation planes are bitboards except the final counter plane
-#define NUM_BIT_PLANES (CHECKERS_OBS_PLANES - 1)
 
 /**
  * `state` layout (see checkers.h for the authoritative description):
@@ -68,16 +66,19 @@
 #define FILE_LAST  FILE_MASK(CHECKERS_NUM_COLS - 1)
 
 #define FILES_EVEN (((~UINT64_C(0) / 3) & ROW_MASK(0)) * FILE_MASK(0))
-#define ROWS_ODD       \
-	(ROW_MASK(1) * \
-	 (LOW_BITS(2 * CHECKERS_NUM_COLS * (CHECKERS_NUM_ROWS / 2)) / LOW_BITS(2 * CHECKERS_NUM_COLS)))
+#define ROWS_ODD                                                      \
+	(ROW_MASK(1) *                                                \
+	 (LOW_BITS(2 * CHECKERS_NUM_COLS * (CHECKERS_NUM_ROWS / 2)) / \
+	  LOW_BITS(2 * CHECKERS_NUM_COLS)))
 #define DARK_SQUARES (FILES_EVEN ^ ROWS_ODD)
 
 // The mover is orientated on the bottom rows, with the opponent on the top rows
-#define MEN_INIT_MOVER (DARK_SQUARES & LOW_BITS(CHECKERS_MEN_ROWS * CHECKERS_NUM_COLS))
-#define MEN_INIT_OPP                                   \
-	(DARK_SQUARES & (LOW_BITS(CHECKERS_MEN_ROWS * CHECKERS_NUM_COLS) \
-	                 << ((CHECKERS_NUM_ROWS - CHECKERS_MEN_ROWS) * CHECKERS_NUM_COLS)))
+#define MEN_INIT_MOVER \
+	(DARK_SQUARES & LOW_BITS(CHECKERS_MEN_ROWS * CHECKERS_NUM_COLS))
+#define MEN_INIT_OPP                                      \
+	(DARK_SQUARES &                                   \
+	 (LOW_BITS(CHECKERS_MEN_ROWS * CHECKERS_NUM_COLS) \
+	  << ((CHECKERS_NUM_ROWS - CHECKERS_MEN_ROWS) * CHECKERS_NUM_COLS)))
 
 // The mover always promotes on the far row of the board
 #define PROMO_ROW ROW_MASK(CHECKERS_NUM_ROWS - 1)
@@ -250,10 +251,11 @@ static uint64_t checkers_get_valid_actions(const uint64_t state[],
 		 * AND-ing with the two's-complement negation gives only the
 		 * lowest-set bit
 		 */
-		const uint64_t piece      = board & (~board + 1);
-		const uint64_t square     = (uint64_t)__builtin_ctzll(piece);
-		const bool king           = (kings & piece) != 0;
-		const uint64_t directions = king ? CHECKERS_NUM_DIRS : NUM_FWD_DIRS;
+		const uint64_t piece  = board & (~board + 1);
+		const uint64_t square = (uint64_t)__builtin_ctzll(piece);
+		const bool king       = (kings & piece) != 0;
+		const uint64_t directions =
+		        king ? CHECKERS_NUM_DIRS : NUM_FWD_DIRS;
 
 		for (uint64_t direction = 0; direction < directions;
 		     direction++) {
@@ -271,10 +273,11 @@ static uint64_t checkers_get_valid_actions(const uint64_t state[],
 
 	// No jump anywhere: quiet steps
 	for (uint64_t board = own; board; board &= board - 1) {
-		const uint64_t piece      = board & (~board + 1);
-		const uint64_t square     = (uint64_t)__builtin_ctzll(piece);
-		const bool king           = (kings & piece) != 0;
-		const uint64_t directions = king ? CHECKERS_NUM_DIRS : NUM_FWD_DIRS;
+		const uint64_t piece  = board & (~board + 1);
+		const uint64_t square = (uint64_t)__builtin_ctzll(piece);
+		const bool king       = (kings & piece) != 0;
+		const uint64_t directions =
+		        king ? CHECKERS_NUM_DIRS : NUM_FWD_DIRS;
 
 		for (uint64_t direction = 0; direction < directions;
 		     direction++) {
@@ -413,84 +416,86 @@ static void checkers_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 }
 
 static void checkers_get_observation(const uint64_t state[], uint64_t player,
-                                     uint8_t* obs_out) {
+                                     uint64_t* obs_out) {
+	assert(state != NULL);
 	assert(player < CHECKERS_NUM_PLAYERS);
+	assert(obs_out != NULL);
+	(void)player;
 
-	// Rotate the observer's slot relative to the mover
-	const uint64_t seat = (player + CHECKERS_NUM_PLAYERS -
-	                       state[STATE_OFFSET_CURRENT_PLAYER]) %
-	                      CHECKERS_NUM_PLAYERS;
-	const bool rotate   = seat != 0;
+	const uint64_t kings = state[STATE_OFFSET_KINGS];
 
-	const uint64_t kings = rotate ? rotate180(state[STATE_OFFSET_KINGS])
-	                              : state[STATE_OFFSET_KINGS];
+	for (uint64_t p = 0; p < CHECKERS_NUM_PLAYERS; p++) {
+		const uint64_t board = state[STATE_OFFSET_BOARDS + p];
 
-	/**
-	 * Men + kings planes per player: the observer first, then the
-	 * remaining players in turn order
-	 */
-	uint64_t planes[NUM_BIT_PLANES];
-
-	for (uint64_t i = 0; i < CHECKERS_NUM_PLAYERS; i++) {
-		uint64_t board = state[STATE_OFFSET_BOARDS +
-		                       (seat + i) % CHECKERS_NUM_PLAYERS];
-
-		if (rotate)
-			board = rotate180(board);
-
-		planes[2 * i]     = board & ~kings;
-		planes[2 * i + 1] = board & kings;
+		for (uint64_t s = 0; s < CHECKERS_NUM_SQUARES; s++) {
+			const uint64_t square_bitboard = UINT64_C(1) << s;
+			obs_out[p * CHECKERS_NUM_SQUARES + s] =
+			        !(board & square_bitboard)  ? CHECKERS_OBS_EMPTY
+				: (kings & square_bitboard) ? CHECKERS_OBS_KING
+				                            : CHECKERS_OBS_MAN;
+		}
 	}
 
-	planes[2 * CHECKERS_NUM_PLAYERS] =
-	        rotate ? rotate180(state[STATE_OFFSET_CONTINUATION])
-	               : state[STATE_OFFSET_CONTINUATION];
+	const uint64_t continuation = state[STATE_OFFSET_CONTINUATION];
 
-	size_t i = 0;
-
-	for (size_t p = 0; p < NUM_BIT_PLANES; p++)
-		for (uint64_t sq = 0; sq < CHECKERS_NUM_SQUARES; sq++)
-			obs_out[i++] = (uint8_t)((planes[p] >> sq) & 1);
-
-	// Quiet-ply counter, broadcast (raw count, <= DRAW_PLIES)
-	for (uint64_t sq = 0; sq < CHECKERS_NUM_SQUARES; sq++)
-		obs_out[i++] = (uint8_t)state[STATE_OFFSET_QUIET_PLIES];
-
-	assert(i == CHECKERS_OBS_SIZE);
+	obs_out[CHECKERS_OBS_CONTINUATION_OFFSET] =
+	        continuation ? (uint64_t)__builtin_ctzll(continuation)
+		             : CHECKERS_OBS_NO_CONTINUATION;
+	obs_out[CHECKERS_OBS_QUIET_PLIES_OFFSET] =
+	        state[STATE_OFFSET_QUIET_PLIES];
 }
 
 static void checkers_get_features(const uint64_t state[], uint64_t player,
                                   float* features_out) {
-	assert(player < CHECKERS_NUM_PLAYERS);
-
-	uint8_t obs[CHECKERS_OBS_SIZE];
-
+	assert(features_out != NULL);
+	uint64_t obs[CHECKERS_OBS_SIZE];
 	checkers_get_observation(state, player, obs);
 
-	for (size_t i = 0; i < NUM_BIT_PLANES * CHECKERS_NUM_SQUARES; i++)
-		features_out[i] = (float)obs[i];
+	for (size_t p = 0; p < CHECKERS_NUM_PLAYERS; p++) {
+		for (size_t sq = 0; sq < CHECKERS_NUM_SQUARES; sq++) {
+			const uint64_t piece =
+			        obs[p * CHECKERS_NUM_SQUARES + sq];
+			features_out[(2 * p) * CHECKERS_NUM_SQUARES + sq] =
+			        (float)(piece == CHECKERS_OBS_MAN);
+			features_out[(2 * p + 1) * CHECKERS_NUM_SQUARES + sq] =
+			        (float)(piece == CHECKERS_OBS_KING);
+		}
+	}
 
-	// Normalise the counter plane to [0, 1]
-	for (size_t i = NUM_BIT_PLANES * CHECKERS_NUM_SQUARES; i < CHECKERS_OBS_SIZE;
-	     i++)
-		features_out[i] = (float)obs[i] / (float)DRAW_PLIES;
+	const float quiet =
+	        (float)obs[CHECKERS_OBS_QUIET_PLIES_OFFSET] / (float)DRAW_PLIES;
+	for (size_t sq = 0; sq < CHECKERS_NUM_SQUARES; sq++) {
+		features_out[2 * CHECKERS_NUM_PLAYERS * CHECKERS_NUM_SQUARES +
+		             sq] =
+		        (float)(obs[CHECKERS_OBS_CONTINUATION_OFFSET] == sq);
+		features_out[(2 * CHECKERS_NUM_PLAYERS + 1) *
+		                     CHECKERS_NUM_SQUARES +
+		             sq] = quiet;
+	}
 }
 
 static const char man_chars[CHECKERS_NUM_PLAYERS]  = { 'b', 'w' };
 static const char king_chars[CHECKERS_NUM_PLAYERS] = { 'B', 'W' };
+
+static inline uint64_t board_to_display(const uint64_t state[],
+                                        uint64_t board) {
+	return state[STATE_OFFSET_CURRENT_PLAYER] == 0 ? board
+	                                               : rotate180(board);
+}
 
 static inline char square_char(const uint64_t state[], uint64_t row,
                                uint64_t col) {
 	if ((row + col) % 2 != 0)
 		return ' '; // light square: never occupied
 
-	const uint64_t bit   = UINT64_C(1) << (row * CHECKERS_NUM_COLS + col);
-	const bool king      = (state[STATE_OFFSET_KINGS] & bit) != 0;
 	const uint64_t mover = state[STATE_OFFSET_CURRENT_PLAYER];
+	const uint64_t bit   = UINT64_C(1) << (row * CHECKERS_NUM_COLS + col);
+	const bool king =
+	        (board_to_display(state, state[STATE_OFFSET_KINGS]) & bit) != 0;
 
 	for (uint64_t p = 0; p < CHECKERS_NUM_PLAYERS; p++)
-		if (state[STATE_OFFSET_BOARDS + p] & bit) {
-			// Slot p belongs to the p-th player after the mover
+		if (board_to_display(state, state[STATE_OFFSET_BOARDS + p]) &
+		    bit) {
 			const uint64_t owner =
 			        (mover + p) % CHECKERS_NUM_PLAYERS;
 
@@ -521,10 +526,13 @@ static uint64_t checkers_to_string(const uint64_t state[], uint64_t buf_size,
 	}
 
 	if (state[STATE_OFFSET_CONTINUATION]) {
+		const uint64_t from =
+		        (uint64_t)__builtin_ctzll(board_to_display(
+		                state, state[STATE_OFFSET_CONTINUATION]));
+
 		n = snprintf(buf, remaining,
 		             "Must continue jumping from square %u\n",
-		             (unsigned)__builtin_ctzll(
-		                     state[STATE_OFFSET_CONTINUATION]));
+		             (unsigned)from);
 		if (n > 0 && (size_t)n < remaining) {
 			buf += n;
 			remaining -= (size_t)n;
@@ -575,9 +583,9 @@ static uint64_t checkers_to_string(const uint64_t state[], uint64_t buf_size,
 	return (uint64_t)(buf - start);
 }
 
-// Two-level stringify, to embed macro values in string literals
-#define STR_(x) #x
-#define STR(x)  STR_(x)
+#define DRAW_PLIES_STR STRINGIFY(DRAW_PLIES)
+#define NUM_DIRS_STR   STRINGIFY(CHECKERS_NUM_DIRS)
+#define NUM_COLS_STR   STRINGIFY(CHECKERS_NUM_COLS)
 
 static const char* checkers_help_prompt(void) {
 	return "Checkers (English draughts)\n"
@@ -589,57 +597,20 @@ static const char* checkers_help_prompt(void) {
 	       "and a piece that can keep jumping must (each jump is entered\n"
 	       "as its own action). A man reaching the far row becomes a\n"
 	       "king, which ends the move. A player with no legal move\n"
-	       "loses; " STR(
-	               DRAW_PLIES) " plies without a capture "
-	                           "or man move is a draw.\n"
-	                           "\n"
-	                           "The board is stored and shown from the "
-	                           "side to move's\n"
-	                           "perspective: the mover's pieces always "
-	                           "advance up the\n"
-	                           "board, and the view rotates 180 degrees "
-	                           "when the turn\n"
-	                           "passes. Actions use this frame too, "
-	                           "encoded as\n"
-	                           "square * " STR(
-	                                   CHECKERS_NUM_DIRS) " + direction, with "
-	                                             "square = row * " STR(
-	                                                     CHECKERS_NUM_COLS) " + "
-	                                                               "column"
-	                                                               "\n"
-	                                                               "(row 0 "
-	                                                               "at the "
-	                                                               "bottom "
-	                                                               "of the "
-	                                                               "mover'"
-	                                                               "s "
-	                                                               "view) "
-	                                                               "and "
-	                                                               "directi"
-	                                                               "ons\n"
-	                                                               "0: "
-	                                                               "up-"
-	                                                               "left, "
-	                                                               "1: "
-	                                                               "up-"
-	                                                               "right, "
-	                                                               "2: "
-	                                                               "down-"
-	                                                               "left, "
-	                                                               "3: "
-	                                                               "down-"
-	                                                               "right."
-	                                                               "\n"
-	                                                               "Men "
-	                                                               "only "
-	                                                               "ever "
-	                                                               "use "
-	                                                               "the "
-	                                                               "forward"
-	                                                               " direct"
-	                                                               "ions 0 "
-	                                                               "and "
-	                                                               "1.\n";
+	       "loses; " DRAW_PLIES_STR " plies without a capture or man move\n"
+	       "is a draw.\n"
+	       "\n"
+	       "The board is always shown from player 1's side: b men start\n"
+	       "at the bottom and w men at the top.\n"
+	       "\n"
+	       "Actions are encoded in the side to move's frame, in which the\n"
+	       "mover always advances up the board, as\n"
+	       "square * " NUM_DIRS_STR
+	       " + direction, with square = row × " NUM_COLS_STR " + column\n"
+	       "(row 0 at the bottom) and directions 0: up-left, 1: up-right,\n"
+	       "2: down-left, 3: down-right. Men only ever use the forward\n"
+	       "directions 0 and 1. For player 2 this frame is the shown\n"
+	       "board rotated 180 degrees.\n";
 }
 
 const Game checkers = {
@@ -654,6 +625,7 @@ const Game checkers = {
 	.get_features       = checkers_get_features,
 	.to_string          = checkers_to_string,
 	.help_prompt        = checkers_help_prompt,
-	.obs_dims           = { CHECKERS_OBS_PLANES, CHECKERS_NUM_ROWS, CHECKERS_NUM_COLS },
-	.features_dims      = { CHECKERS_OBS_PLANES, CHECKERS_NUM_ROWS, CHECKERS_NUM_COLS },
+	.obs_dims           = { CHECKERS_OBS_SIZE },
+	.features_dims      = { CHECKERS_FEATURES_PLANES, CHECKERS_NUM_ROWS,
+	                        CHECKERS_NUM_COLS },
 };

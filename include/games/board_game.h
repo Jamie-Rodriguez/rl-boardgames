@@ -171,13 +171,13 @@ typedef struct Game {
 	 * 	| parameter |      required allocation      |
 	 * 	|:---------:|:-----------------------------:|
 	 * 	| state     | STATE_SIZE * sizeof(uint64_t) |
-	 * 	| obs_out   | OBS_SIZE * sizeof(uint8_t)    |
+	 * 	| obs_out   | OBS_SIZE * sizeof(uint64_t)   |
 	 *
 	 * `obs_out` is a contiguous buffer representing a tensor of shape
 	 * `obs_dims[0..OBS_NDIMS-1]` in row-major order.
 	 */
 	void (*get_observation)(const uint64_t state[], uint64_t player,
-	                        uint8_t* obs_out);
+	                        uint64_t* obs_out);
 	/**
 	 * Encodes the game state as a float array optimised for neural
 	 * network consumption, from the perspective of `player`.
@@ -204,9 +204,8 @@ typedef struct Game {
 	const char* (*help_prompt)(void);
 	/**
 	 * Shape of the `observation` tensor.
-	 * 	e.g. { 2, 3, 3 } for tic-tac-toe (2 planes of 3x3)
-	 * 	     { 19, 8, 8 } for chess (19 planes of 8x8)
-	 * 	     { 4 } for Pig (flat vector of 4 values)
+	 * 	e.g. { 18 } for tic-tac-toe (2 × 9-cell boards)
+	 * 	     { 3 } for Pig (raw scores and turn total)
 	 *
 	 * Note: Only the first `OBS_NDIMS` elements are meaningful.
 	 */

@@ -138,8 +138,10 @@ static void ttt_get_outcome(const uint64_t state[], int64_t scores_out[]) {
 
 
 static void ttt_get_observation(const uint64_t state[], uint64_t player,
-                                uint8_t* obs_out) {
+                                uint64_t* obs_out) {
+	assert(state != NULL);
 	assert(player < TTT_NUM_PLAYERS);
+	assert(obs_out != NULL);
 
 	for (size_t p = 0; p < TTT_NUM_PLAYERS; p++) {
 		uint64_t board_player = (player + p) % TTT_NUM_PLAYERS;
@@ -155,10 +157,10 @@ static void ttt_get_features(const uint64_t state[], uint64_t player,
                              float* features_out) {
 	assert(player < TTT_NUM_PLAYERS);
 
-	uint8_t obs[TTT_OBS_SIZE];
+	uint64_t obs[TTT_OBS_SIZE];
 	ttt_get_observation(state, player, obs);
 
-	for (size_t i = 0; i < TTT_OBS_SIZE; i++)
+	for (size_t i = 0; i < TTT_FEATURES_SIZE; i++)
 		features_out[i] = (float)obs[i];
 }
 
@@ -243,6 +245,6 @@ const Game tic_tac_toe = {
 	.get_features       = ttt_get_features,
 	.to_string          = ttt_to_string,
 	.help_prompt        = ttt_help_prompt,
-	.obs_dims           = { TTT_NUM_PLAYERS, TTT_NUM_ROWS, TTT_NUM_COLS },
+	.obs_dims           = { TTT_OBS_SIZE },
 	.features_dims      = { TTT_NUM_PLAYERS, TTT_NUM_ROWS, TTT_NUM_COLS },
 };

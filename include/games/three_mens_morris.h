@@ -36,27 +36,25 @@
 #define TMM_STATE_SPACE_SIZE 5710
 
 /**
- * Observation: a flat vector of shape { 20 }:
+ * Observation: a flat vector of shape { 18 }:
  *
  *   [0..8]:   the observing player's board (one 0/1 value per square)
  *   [9..17]:  the opponent's board (one 0/1 value per square)
- *   [18]:     phase: 0 = placement, 1 = movement
- *   [19]:     player to move: 0 = observer, 1 = opponent
+ *
+ * The phase is not encoded: pieces are never removed, so it has no real
+ * meaning for a consumer.
  */
 #define TMM_OBS_NDIMS 1
-#define TMM_OBS_SIZE  (TMM_NUM_PLAYERS * TMM_BOARD_SIZE + 2)
+#define TMM_OBS_SIZE  (TMM_NUM_PLAYERS * TMM_BOARD_SIZE)
 
 /**
- * Features: four float planes of total shape { 4, 3, 3 }, using the same
+ * Features: two float planes of total shape { 2, 3, 3 }, using the same
  * square ordering as the observation. Each 3 × 3 plane contains:
  *
  *   0: the observing player's pieces
  *   1: the opponent's pieces
- *   2: phase: 0 = placement, 1 = movement (broadcast across all 9 slots)
- *   3: player to move: 0 = observer, 1 = opponent (broadcast across all 9
- *      slots)
  */
-#define TMM_FEATURES_PLANES (TMM_NUM_PLAYERS + 2)
+#define TMM_FEATURES_PLANES TMM_NUM_PLAYERS
 #define TMM_FEATURES_NDIMS  3
 #define TMM_FEATURES_SIZE   (TMM_FEATURES_PLANES * TMM_BOARD_SIZE)
 

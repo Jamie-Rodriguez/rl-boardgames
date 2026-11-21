@@ -6,10 +6,6 @@
 #define PIG_NUM_PLAYERS 2
 #define PIG_TARGET      100
 
-#if PIG_TARGET + 5 > 255
-#error "PIG_TARGET too large for the uint8 observation encoding"
-#endif
-
 /**
  * State layout:
  * 	[0]:        the player whose turn it currently is
@@ -40,20 +36,22 @@
 #define PIG_STATE_SPACE_SIZE UINT64_MAX
 
 /**
- * Observation: flat uint8 vector in the form
- * 	[my_score, next_player_score, ..., last_player_score, turn_total]
+ * Observation: flat uint64 vector:
+ * 	[0..N-1]: banked scores, observer first then players in turn
+ * 	          order
+ * 	[N]:      current turn total (unbanked)
  */
 #define PIG_OBS_NDIMS 1
 #define PIG_OBS_SIZE  (PIG_NUM_PLAYERS + 1)
 
 /**
- * Features: same shape as observation, but normalised by `PIG_TARGET`
- * so values lie approximately in [0, 1] for neural network consumption.
- * Values may slightly exceed 1.0 at or near terminal states (a banked
+ * Features: same shape as observation, but normalised by `PIG_TARGET` so
+ * values lie approximately in [0, 1] for neural network consumption.
+ * Values may slightly exceed 1.0 at or near terminal states (e.g. a banked
  * score can reach PIG_TARGET + 5 when a player holds on a winning roll).
  */
 #define PIG_FEATURES_NDIMS 1
-#define PIG_FEATURES_SIZE  PIG_OBS_SIZE
+#define PIG_FEATURES_SIZE  (PIG_NUM_PLAYERS + 1)
 
 /**
  * String buffer size: one header line + one line per player + one line

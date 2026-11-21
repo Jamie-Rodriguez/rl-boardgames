@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "games/blackjack.h"
+#include "utils.h"
 
 /**
  * State layout:
@@ -546,37 +547,28 @@ static void blackjack_get_outcome(const uint64_t state[],
 }
 
 static void blackjack_get_observation(const uint64_t state[], uint64_t player,
-                                      uint8_t* obs_out) {
+                                      uint64_t* obs_out) {
+	assert(state != NULL);
 	assert(player < BJ_NUM_PLAYERS);
+	assert(obs_out != NULL);
 	(void)player; // Single player; the shoe is omitted (see blackjack.h)
 
-	size_t i = 0;
-
-	obs_out[i++] = (uint8_t)state[STATE_OFFSET_DEALER_UP];
-
-	if (dealer_hand_revealed(state)) {
-		obs_out[i++] = (uint8_t)state[STATE_OFFSET_DEALER_HOLE];
-		obs_out[i++] = (uint8_t)state[STATE_OFFSET_DEALER_TOTAL];
-		obs_out[i++] = (uint8_t)state[STATE_OFFSET_DEALER_ACES];
-		obs_out[i++] = (uint8_t)state[STATE_OFFSET_DEALER_NCARDS];
-	} else {
-		obs_out[i++] = 0; // hole card
-		obs_out[i++] = 0; // hard total
-		obs_out[i++] = 0; // ace count
-		obs_out[i++] = 0; // card count
-	}
-
-	obs_out[i++] = (uint8_t)state[STATE_OFFSET_NUM_HANDS];
-	obs_out[i++] = (uint8_t)state[STATE_OFFSET_CUR_HAND];
+	obs_out[BJ_OBS_DEALER_UP_OFFSET] = state[STATE_OFFSET_DEALER_UP];
+	obs_out[BJ_OBS_CUR_HAND_OFFSET]  = state[STATE_OFFSET_CUR_HAND];
 
 	for (uint64_t h = 0; h < BJ_MAX_HANDS; h++) {
 		const uint64_t* hand = hand_cptr(state, h);
+		uint64_t* hand_obs   = &obs_out[BJ_OBS_HANDS_OFFSET +
+		                                h * BJ_OBS_HAND_NUM_FIELDS];
 
-		for (size_t f = 0; f < HAND_NUM_WORDS; f++)
-			obs_out[i++] = (uint8_t)hand[f];
+		hand_obs[BJ_OBS_HAND_CARD1]      = hand[HAND_CARD1];
+		hand_obs[BJ_OBS_HAND_CARD2]      = hand[HAND_CARD2];
+		hand_obs[BJ_OBS_HAND_HARD_TOTAL] = hand[HAND_TOTAL];
+		hand_obs[BJ_OBS_HAND_ACES]       = hand[HAND_ACES];
+		hand_obs[BJ_OBS_HAND_NCARDS]     = hand[HAND_NCARDS];
+		hand_obs[BJ_OBS_HAND_DOUBLED] =
+		        hand[HAND_FLAGS] & HAND_FLAG_DOUBLED ? 1 : 0;
 	}
-
-	assert(i == BJ_OBS_SIZE);
 }
 
 static void blackjack_get_features(const uint64_t state[], uint64_t player,
@@ -584,39 +576,25 @@ static void blackjack_get_features(const uint64_t state[], uint64_t player,
 	assert(player < BJ_NUM_PLAYERS);
 	(void)player;
 
-	size_t i = 0;
-
 	if (state[STATE_OFFSET_DEALER_UP] != 0) {
 		const uint64_t rank = state[STATE_OFFSET_DEALER_UP] - 1;
 		const uint64_t val = (rank == RANK_ACE) ? 11 : rank_value(rank);
 
-		features_out[i++] = (float)val / 11.0f;
+		features_out[BJ_FEATURES_DEALER_UP_OFFSET] = (float)val / 11.0f;
 	} else {
-		features_out[i++] = 0.0f;
+		features_out[BJ_FEATURES_DEALER_UP_OFFSET] = 0.0f;
 	}
 
-	if (dealer_hand_revealed(state)) {
-		/* Clamped like the hand totals: a bust dealer exceeds 21 */
-		const float total = (float)dealer_best_total(state) / 21.0f;
-		const float cards =
-		        (float)state[STATE_OFFSET_DEALER_NCARDS] / 8.0f;
-
-		features_out[i++] = total < 1.0f ? total : 1.0f;
-		features_out[i++] = cards < 1.0f ? cards : 1.0f;
-	} else {
-		features_out[i++] = 0.0f; // best total
-		features_out[i++] = 0.0f; // card count
-	}
-
-	features_out[i++] =
-	        (float)state[STATE_OFFSET_NUM_HANDS] / (float)BJ_MAX_HANDS;
-	features_out[i++] =
+	features_out[BJ_FEATURES_CUR_HAND_OFFSET] =
 	        (float)state[STATE_OFFSET_CUR_HAND] / (float)BJ_MAX_HANDS;
 
 	for (uint64_t h = 0; h < BJ_MAX_HANDS; h++) {
 		const uint64_t* hand = hand_cptr(state, h);
 		const uint64_t hard  = hand[HAND_TOTAL];
 		const uint64_t best  = hand_best_total(hand);
+		float* hand_features =
+		        &features_out[BJ_FEATURES_HANDS_OFFSET +
+			              h * BJ_FEATURES_HAND_NUM_FIELDS];
 
 		/**
 		 * Clamp: busts exceed 21, and a freak hand can exceed 8 cards
@@ -625,16 +603,15 @@ static void blackjack_get_features(const uint64_t state[], uint64_t player,
 		const float total = (float)best / 21.0f;
 		const float cards = (float)hand[HAND_NCARDS] / 8.0f;
 
-		features_out[i++] = total < 1.0f ? total : 1.0f;
-		features_out[i++] = (best != hard) ? 1.0f : 0.0f;
-		features_out[i++] = cards < 1.0f ? cards : 1.0f;
-		features_out[i++] =
-		        (hand[HAND_FLAGS] & HAND_FLAG_DOUBLED) ? 1.0f : 0.0f;
-		features_out[i++] =
-		        (hand[HAND_FLAGS] & HAND_FLAG_FINISHED) ? 1.0f : 0.0f;
+		hand_features[BJ_FEATURES_HAND_BEST_TOTAL] =
+		        total < 1.0f ? total : 1.0f;
+		hand_features[BJ_FEATURES_HAND_SOFT] =
+		        (best != hard) ? 1.0f : 0.0f;
+		hand_features[BJ_FEATURES_HAND_NCARDS] =
+		        cards < 1.0f ? cards : 1.0f;
+		hand_features[BJ_FEATURES_HAND_DOUBLED] =
+		        hand[HAND_FLAGS] & HAND_FLAG_DOUBLED ? 1.0f : 0.0f;
 	}
-
-	assert(i == BJ_FEATURES_SIZE);
 }
 
 static char rank_char(uint64_t card) {
