@@ -2,21 +2,39 @@
 #include <stddef.h>
 #include <stdio.h>
 #include "games/blackjack.h"
-#include "utils.h"
 
 /**
- * State layout:
- * 	[0]:        phase of the round (deal / decide / draw / dealer / done)
- * 	[1..10]:    remaining shoe composition: count of each rank 0..9
- * 	[11]:       dealer upcard (rank + 1, 0 if not yet dealt)
- * 	[12]:       dealer hole card (rank + 1, 0 if not yet dealt)
- * 	[13]:       dealer hard total (aces counted as 1)
- * 	[14]:       dealer ace count
- * 	[15]:       dealer card count
- * 	[16]:       number of player hands (1..BJ_MAX_HANDS)
- * 	[17]:       index of the hand currently being played
- * 	[18..]:     BJ_MAX_HANDS hand records of 6 words each:
- * 	                [card1, card2, hard total, ace count, card count, flags]
+ * State layout: one contiguous vector, wrapped over three rows here (indices
+ * shown for BJ_MAX_HANDS = 4):
+ *
+ * 	    0      1     2     3     4     5     6     7     8     9    10
+ * 	+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+ * 	| phase |  A  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |  T  |
+ * 	+-------+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+
+ * 	        \____________ the shoe: cards left of each rank ____________/
+ *
+ * 	    11       12      13      14      15      16       17
+ * 	+--------+--------+-------+-------+-------+-------+---------+
+ * 	| upcard |  hole  | hard  |  ace  | card  |  num  | current |
+ * 	|        |  card  | total | count | count | hands |  hand   |
+ * 	+--------+--------+-------+-------+-------+-------+---------+
+ * 	\________________ dealer _________________/
+ *
+ * 	  18..23   24..29   30..35   36..41
+ * 	+--------+--------+--------+--------+
+ * 	| hand 0 | hand 1 | hand 2 | hand 3 |
+ * 	+--------+--------+--------+--------+
+ * 	|         \
+ * 	|          \____________________________________
+ * 	|                                               \
+ * 	+-------+-------+-------+-------+-------+-------+
+ * 	| card1 | card2 | hard  |  ace  | card  | flags |
+ * 	|       |       | total | count | count |       |
+ * 	+-------+-------+-------+-------+-------+-------+
+ * 	   +0      +1      +2      +3      +4      +5
+ *
+ * The phase is one of the PHASE_* values and a hand's flags word is a mask of
+ * HAND_FLAG_* bits, both defined below. The hand count is in 1..BJ_MAX_HANDS.
  *
  * Card encoding: ranks 0..9 = A,2,3,4,5,6,7,8,9,T. Stored card fields hold
  * rank + 1 so that 0 means "no card".
@@ -45,12 +63,13 @@
 #define STATE_OFFSET_HANDS         18
 
 /* Note: These are offset from the specific hand's pointer */
-#define HAND_CARD1  0 // rank + 1, 0 if not dealt
-#define HAND_CARD2  1 // rank + 1, 0 if not dealt
-#define HAND_TOTAL  2 // hard total (aces count as 1)
-#define HAND_ACES   3
-#define HAND_NCARDS 4
-#define HAND_FLAGS  5
+#define HAND_CARD1     0 // rank + 1, 0 if not dealt
+#define HAND_CARD2     1 // rank + 1, 0 if not dealt
+#define HAND_TOTAL     2 // hard total (aces count as 1)
+#define HAND_ACES      3
+#define HAND_NCARDS    4
+#define HAND_FLAGS     5
+#define HAND_NUM_WORDS (HAND_FLAGS + 1)
 
 /* Bitmask of hand properties */
 #define HAND_FLAG_FINISHED    (1 << 0) // no further decisions for this hand
@@ -81,6 +100,8 @@
  */
 #define BJ_DECK_PLAYER BJ_NUM_PLAYERS
 
+#define NUM_RANKS 10
+
 #define RANK_ACE 0
 #define RANK_TEN 9
 
@@ -98,7 +119,7 @@ static inline const uint64_t* hand_cptr(const uint64_t state[], uint64_t h) {
 
 /* Hard value of a rank (aces count as 1) */
 static inline uint64_t rank_value(uint64_t rank) {
-	assert(rank < BJ_NUM_RANKS);
+	assert(rank < NUM_RANKS);
 
 	return rank + 1;
 }
@@ -115,6 +136,11 @@ static inline uint64_t hand_best_total(const uint64_t* hand) {
 
 static inline bool hand_is_bust(const uint64_t* hand) {
 	return hand[HAND_TOTAL] > 21;
+}
+
+/* An equal-rank two-card pair, as splitting requires */
+static inline bool hand_is_pair(const uint64_t* hand) {
+	return hand[HAND_NCARDS] == 2 && hand[HAND_CARD1] == hand[HAND_CARD2];
 }
 
 // A natural blackjack: 21 with the original two cards of an "unsplit" hand
@@ -142,7 +168,7 @@ static inline bool dealer_must_hit(const uint64_t state[]) {
 	if (total < 17)
 		return true;
 
-#if BJ_DEALER_HITS_SOFT_17
+#if DEALER_HITS_SOFT_17
 	/* Soft 17: a promoted ace is in play (best != hard total) */
 	if (total == 17 && total != state[STATE_OFFSET_DEALER_TOTAL])
 		return true;
@@ -182,7 +208,7 @@ static void add_card_to_dealers_hand(uint64_t state[], uint64_t rank) {
 }
 
 static void draw_from_shoe(uint64_t state[], uint64_t rank) {
-	assert(rank < BJ_NUM_RANKS);
+	assert(rank < NUM_RANKS);
 	assert(state[STATE_OFFSET_SHOE + rank] > 0);
 
 	state[STATE_OFFSET_SHOE + rank]--;
@@ -245,7 +271,7 @@ static void blackjack_init(const void* config, uint64_t state[]) {
 	for (size_t i = 0; i < BJ_STATE_SIZE; i++)
 		state[i] = 0;
 
-	for (uint64_t r = 0; r < BJ_NUM_RANKS; r++)
+	for (uint64_t r = 0; r < NUM_RANKS; r++)
 		state[STATE_OFFSET_SHOE + r] =
 		        (r == RANK_TEN ? 16 : 4) * BJ_NUM_DECKS;
 
@@ -279,7 +305,7 @@ static uint64_t blackjack_get_valid_actions(const uint64_t state[],
 		 */
 		uint64_t n = 0;
 
-		for (uint64_t r = 0; r < BJ_NUM_RANKS; r++)
+		for (uint64_t r = 0; r < NUM_RANKS; r++)
 			for (uint64_t c = 0; c < state[STATE_OFFSET_SHOE + r];
 			     c++)
 				actions_out[n++] = r;
@@ -305,8 +331,7 @@ static uint64_t blackjack_get_valid_actions(const uint64_t state[],
 	 * (Split aces never reach a decision node, so re-splitting aces is
 	 * implicitly impossible.)
 	 */
-	if (hand[HAND_NCARDS] == 2 && hand[HAND_CARD1] == hand[HAND_CARD2] &&
-	    state[STATE_OFFSET_NUM_HANDS] < BJ_MAX_HANDS)
+	if (hand_is_pair(hand) && state[STATE_OFFSET_NUM_HANDS] < BJ_MAX_HANDS)
 		actions_out[n++] = BJ_ACTION_SPLIT;
 
 	/**
@@ -546,6 +571,19 @@ static void blackjack_get_outcome(const uint64_t state[],
 	scores_out[0] = total;
 }
 
+#define OBS_DEALER_UP_OFFSET 0 // dealer upcard (rank + 1)
+#define OBS_CUR_HAND_OFFSET  1 // index of the hand currently being played
+#define OBS_HANDS_OFFSET     2 // index of first hand
+
+/* Offset from the start of the specific hand's region */
+#define OBS_HAND_CARD1      0 // rank + 1
+#define OBS_HAND_CARD2      1 // rank + 1
+#define OBS_HAND_HARD_TOTAL 2 // aces count as 1
+#define OBS_HAND_ACES       3
+#define OBS_HAND_NCARDS     4
+#define OBS_HAND_DOUBLED    5 // 1 if doubled down, else 0
+#define OBS_HAND_NUM_FIELDS (OBS_HAND_DOUBLED + 1)
+
 static void blackjack_get_observation(const uint64_t state[], uint64_t player,
                                       uint64_t* obs_out) {
 	assert(state != NULL);
@@ -553,23 +591,41 @@ static void blackjack_get_observation(const uint64_t state[], uint64_t player,
 	assert(obs_out != NULL);
 	(void)player; // Single player; the shoe is omitted (see blackjack.h)
 
-	obs_out[BJ_OBS_DEALER_UP_OFFSET] = state[STATE_OFFSET_DEALER_UP];
-	obs_out[BJ_OBS_CUR_HAND_OFFSET]  = state[STATE_OFFSET_CUR_HAND];
+	obs_out[OBS_DEALER_UP_OFFSET] = state[STATE_OFFSET_DEALER_UP];
+	obs_out[OBS_CUR_HAND_OFFSET]  = state[STATE_OFFSET_CUR_HAND];
 
 	for (uint64_t h = 0; h < BJ_MAX_HANDS; h++) {
 		const uint64_t* hand = hand_cptr(state, h);
-		uint64_t* hand_obs   = &obs_out[BJ_OBS_HANDS_OFFSET +
-		                                h * BJ_OBS_HAND_NUM_FIELDS];
+		uint64_t* hand_obs =
+		        &obs_out[OBS_HANDS_OFFSET + h * OBS_HAND_NUM_FIELDS];
 
-		hand_obs[BJ_OBS_HAND_CARD1]      = hand[HAND_CARD1];
-		hand_obs[BJ_OBS_HAND_CARD2]      = hand[HAND_CARD2];
-		hand_obs[BJ_OBS_HAND_HARD_TOTAL] = hand[HAND_TOTAL];
-		hand_obs[BJ_OBS_HAND_ACES]       = hand[HAND_ACES];
-		hand_obs[BJ_OBS_HAND_NCARDS]     = hand[HAND_NCARDS];
-		hand_obs[BJ_OBS_HAND_DOUBLED] =
+		hand_obs[OBS_HAND_CARD1]      = hand[HAND_CARD1];
+		hand_obs[OBS_HAND_CARD2]      = hand[HAND_CARD2];
+		hand_obs[OBS_HAND_HARD_TOTAL] = hand[HAND_TOTAL];
+		hand_obs[OBS_HAND_ACES]       = hand[HAND_ACES];
+		hand_obs[OBS_HAND_NCARDS]     = hand[HAND_NCARDS];
+		hand_obs[OBS_HAND_DOUBLED] =
 		        hand[HAND_FLAGS] & HAND_FLAG_DOUBLED ? 1 : 0;
 	}
 }
+
+#define FEATURES_DEALER_UP_OFFSET 0 // dealer upcard value / 11 (ace = 11)
+#define FEATURES_CUR_HAND_OFFSET  1 // current hand index / BJ_MAX_HANDS
+#define FEATURES_HANDS_OFFSET     2 // first hand's block
+
+/* Note: These are offset from the start of the specific hand's block */
+#define FEATURES_HAND_BEST_TOTAL 0 // best total / 21
+#define FEATURES_HAND_SOFT       1 // 1 if an ace counts as 11, else 0
+#define FEATURES_HAND_BUST       2 // 1 if bust, else 0
+#define FEATURES_HAND_PAIR       3 // 1 if an equal-rank two-card pair, else 0
+#define FEATURES_HAND_NCARDS     4 // card count / 8
+#define FEATURES_HAND_DOUBLED    5 // 1 if doubled down, else 0
+#define FEATURES_HAND_NUM_FIELDS (FEATURES_HAND_DOUBLED + 1)
+
+#if FEATURES_HANDS_OFFSET != BJ_FEATURES_FIXED_FIELDS || \
+        FEATURES_HAND_NUM_FIELDS != BJ_FEATURES_FIELDS_PER_HAND
+#error "Features layout disagrees with BJ_FEATURES_* in blackjack.h"
+#endif
 
 static void blackjack_get_features(const uint64_t state[], uint64_t player,
                                    float* features_out) {
@@ -580,12 +636,12 @@ static void blackjack_get_features(const uint64_t state[], uint64_t player,
 		const uint64_t rank = state[STATE_OFFSET_DEALER_UP] - 1;
 		const uint64_t val = (rank == RANK_ACE) ? 11 : rank_value(rank);
 
-		features_out[BJ_FEATURES_DEALER_UP_OFFSET] = (float)val / 11.0f;
+		features_out[FEATURES_DEALER_UP_OFFSET] = (float)val / 11.0f;
 	} else {
-		features_out[BJ_FEATURES_DEALER_UP_OFFSET] = 0.0f;
+		features_out[FEATURES_DEALER_UP_OFFSET] = 0.0f;
 	}
 
-	features_out[BJ_FEATURES_CUR_HAND_OFFSET] =
+	features_out[FEATURES_CUR_HAND_OFFSET] =
 	        (float)state[STATE_OFFSET_CUR_HAND] / (float)BJ_MAX_HANDS;
 
 	for (uint64_t h = 0; h < BJ_MAX_HANDS; h++) {
@@ -593,23 +649,28 @@ static void blackjack_get_features(const uint64_t state[], uint64_t player,
 		const uint64_t hard  = hand[HAND_TOTAL];
 		const uint64_t best  = hand_best_total(hand);
 		float* hand_features =
-		        &features_out[BJ_FEATURES_HANDS_OFFSET +
-			              h * BJ_FEATURES_HAND_NUM_FIELDS];
+		        &features_out[FEATURES_HANDS_OFFSET +
+			              h * FEATURES_HAND_NUM_FIELDS];
 
 		/**
-		 * Clamp: busts exceed 21, and a freak hand can exceed 8 cards
-		 * (e.g. many aces) without busting
+		 * Clamp: busts exceed 21 (the bust flag tells them apart from a
+		 * 21), and a freak hand can exceed 8 cards (e.g. many aces)
+		 * without busting
 		 */
 		const float total = (float)best / 21.0f;
 		const float cards = (float)hand[HAND_NCARDS] / 8.0f;
 
-		hand_features[BJ_FEATURES_HAND_BEST_TOTAL] =
+		hand_features[FEATURES_HAND_BEST_TOTAL] =
 		        total < 1.0f ? total : 1.0f;
-		hand_features[BJ_FEATURES_HAND_SOFT] =
+		hand_features[FEATURES_HAND_SOFT] =
 		        (best != hard) ? 1.0f : 0.0f;
-		hand_features[BJ_FEATURES_HAND_NCARDS] =
+		hand_features[FEATURES_HAND_BUST] =
+		        hand_is_bust(hand) ? 1.0f : 0.0f;
+		hand_features[FEATURES_HAND_PAIR] =
+		        hand_is_pair(hand) ? 1.0f : 0.0f;
+		hand_features[FEATURES_HAND_NCARDS] =
 		        cards < 1.0f ? cards : 1.0f;
-		hand_features[BJ_FEATURES_HAND_DOUBLED] =
+		hand_features[FEATURES_HAND_DOUBLED] =
 		        hand[HAND_FLAGS] & HAND_FLAG_DOUBLED ? 1.0f : 0.0f;
 	}
 }
@@ -740,7 +801,7 @@ static const char* blackjack_help_prompt(void) {
 	       "  4 SURRENDER: forfeit half the stake (first decision of\n"
 	       "               the round only)\n"
 	       "\n"
-#if BJ_DEALER_HITS_SOFT_17
+#if DEALER_HITS_SOFT_17
 	       "The dealer hits soft 17 and pays 3:2 on a natural.\n"
 #else
 	       "The dealer stands on all 17s and pays 3:2 on a natural.\n"

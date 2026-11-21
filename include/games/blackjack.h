@@ -4,6 +4,12 @@
 #include "games/board_game.h"
 
 /**
+ * Classic ("Vegas Strip") rules have the dealer stand on soft 17 (S17).
+ * Define this to 1 for H17 tables (dealer *hits* soft 17).
+ */
+#define DEALER_HITS_SOFT_17 0
+
+/**
  * Number of 52-card decks in the shoe. Classic casino blackjack is dealt from
  * a 4-to 8-deck shoe.
  */
@@ -13,11 +19,7 @@
 #error "BJ_NUM_DECKS must be in [4, 8]"
 #endif
 
-/**
- * Classic ("Vegas Strip") rules have the dealer stand on soft 17 (S17).
- * Define this to 1 for H17 tables (dealer *hits* soft 17).
- */
-#define BJ_DEALER_HITS_SOFT_17 0
+#define BJ_SHOE_SIZE (52 * BJ_NUM_DECKS)
 
 /**
  * Blackjack is a one-player game against the house. The dealer plays a fixed,
@@ -53,8 +55,7 @@
  * Scores lie within +/- 2 * BJ_MAX_HANDS bets (worst case: every hand split,
  * doubled, and won/lost).
  *
- * The payout table in blackjack_get_outcome() is derived from this constant,
- * so payout ratios live in exactly one place.
+ * The payout table in blackjack_get_outcome() is derived from this constant.
  * If a ratio is ever changed (e.g. a 6:5 natural table), set this constant to
  * the LCM of the payout denominators (e.g. 10 for 6:5 + half-bet surrender) so
  * every payout stays integral, and be sure to update the table quoted in
@@ -70,33 +71,37 @@
 #define BJ_SCORE_UNITS_PER_BET 2
 
 /**
- * Card ranks are mapped to the 10 blackjack-specific ranks:
+ * State: BJ_STATE_FIXED_WORDS fixed words followed by one record of
+ * BJ_STATE_WORDS_PER_HAND words for each of the BJ_MAX_HANDS hands.
+ * The fixed words are:
  *
- * 	rank:  0   1   2   3   4   5   6   7   8   9
- * 	card:  A   2   3   4   5   6   7   8   9   T
+ * 	 1  round phase
+ * 	10  shoe: cards left of each rank
+ * 	 5  dealer: upcard, hole card, hard total, ace count, card count
+ * 	 1  hand count
+ * 	 1  index of the current hand
  *
- * where T stands for any ten-valued card: 10, J, Q, K. A full shoe therefore
- * holds 4 * BJ_NUM_DECKS cards of each rank 0..8 and 16 * BJ_NUM_DECKS cards
- * of rank 9.
+ * The hand records then follow the initial fixed words (indices shown for
+ * BJ_MAX_HANDS = 4):
  *
- * Collapsing 10/J/Q/K into one rank is lossless under standard rules: any two
- * ten-valued cards form a splittable pair - the standard casino rule. No other
- * rule distinguishes them, and draw statistics match a physical shoe exactly
- * because all ten-value cards are interchangeable. Only the rare "split by
- * rank" variant (e.g. 10-10 splits, 10-Q does not) would require distinct
- * 10/J/Q/K ranks.
+ * 	   0..17    18..23   24..29   30..35   36..41
+ * 	+---------+--------+--------+--------+--------+
+ * 	|  fixed  | hand 0 | hand 1 | hand 2 | hand 3 |
+ * 	|  words  |        |        |        |        |
+ * 	+---------+--------+--------+--------+--------+
+ * 	         /          \
+ * 	 _______/            \__________________________
+ * 	/                                               \
+ * 	+-------+-------+-------+-------+-------+-------+
+ * 	| card1 | card2 | hard  |  ace  | card  | flags |
+ * 	|       |       | total | count | count |       |
+ * 	+-------+-------+-------+-------+-------+-------+
+ * 	   +0      +1      +2      +3      +4      +5
  */
-#define BJ_NUM_RANKS 10
-#define BJ_SHOE_SIZE (52 * BJ_NUM_DECKS)
-
-/*
- * Hand record fields (6 words per hand)
- * [card1, card2, hard total, aces, ncards, flags]
- */
-#define HAND_NUM_WORDS 6
-
-/** See `STATE_OFFSET_*` in `blackjack.c for details */
-#define BJ_STATE_SIZE (18 + HAND_NUM_WORDS * BJ_MAX_HANDS)
+#define BJ_STATE_FIXED_WORDS    18
+#define BJ_STATE_WORDS_PER_HAND 6
+#define BJ_STATE_SIZE \
+	(BJ_STATE_FIXED_WORDS + BJ_STATE_WORDS_PER_HAND * BJ_MAX_HANDS)
 
 /**
  * Decision actions (when it is the player's turn to decide).
@@ -107,7 +112,12 @@
  *
  * See get_valid_actions().
  *
- * At chance nodes, action IDs are card ranks (0..9).
+ * At chance nodes, action IDs are card ranks:
+ *
+ * 	rank:  0   1   2   3   4   5   6   7   8   9
+ * 	card:  A   2   3   4   5   6   7   8   9   T
+ *
+ * where T stands for any ten-valued card: 10, J, Q, K.
  */
 #define BJ_ACTION_STAND     0
 #define BJ_ACTION_HIT       1
@@ -143,44 +153,57 @@
 
 /**
  * Observation: flat uint64 vector, from the player's perspective at one of
- * their decisions.
+ * their decisions: BJ_OBS_FIXED_FIELDS fixed fields followed by one block of
+ * BJ_OBS_FIELDS_PER_HAND fields for each hand (indices shown for
+ * BJ_MAX_HANDS = 4):
+ *
+ * 	    0         1       2..7     8..13   14..19   20..25
+ * 	+--------+---------+--------+--------+--------+--------+
+ * 	| dealer | current | hand 0 | hand 1 | hand 2 | hand 3 |
+ * 	| upcard |  hand   |        |        |        |        |
+ * 	+--------+---------+--------+--------+--------+--------+
+ * 	                  /          \
+ * 	 ________________/            \___________________
+ * 	/                                                 \
+ * 	+-------+-------+-------+-------+-------+---------+
+ * 	| card1 | card2 | hard  |  ace  | card  | doubled |
+ * 	|       |       | total | count | count |  flag   |
+ * 	+-------+-------+-------+-------+-------+---------+
+ * 	   +0      +1      +2      +3      +4       +5
+ *
+ * Cards are rank + 1 (0 = no card); the hard total counts every ace as 1.
+ * Blocks of hands not yet in play are all zero.
  */
-#define BJ_OBS_DEALER_UP_OFFSET 0 // dealer upcard (rank + 1)
-#define BJ_OBS_CUR_HAND_OFFSET  1 // index of the hand currently being played
-#define BJ_OBS_HANDS_OFFSET     2 // first hand's block
-
-/* Note: These are offset from the start of the specific hand's block */
-#define BJ_OBS_HAND_CARD1      0 // rank + 1
-#define BJ_OBS_HAND_CARD2      1 // rank + 1
-#define BJ_OBS_HAND_HARD_TOTAL 2 // aces count as 1
-#define BJ_OBS_HAND_ACES       3
-#define BJ_OBS_HAND_NCARDS     4
-#define BJ_OBS_HAND_DOUBLED    5 // 1 if doubled down, else 0
-#define BJ_OBS_HAND_NUM_FIELDS (BJ_OBS_HAND_DOUBLED + 1)
-
-#define BJ_OBS_NDIMS 1
+#define BJ_OBS_NDIMS           1
+#define BJ_OBS_FIXED_FIELDS    2
+#define BJ_OBS_FIELDS_PER_HAND 6
 #define BJ_OBS_SIZE \
-	(BJ_OBS_HANDS_OFFSET + BJ_OBS_HAND_NUM_FIELDS * BJ_MAX_HANDS)
+	(BJ_OBS_FIXED_FIELDS + BJ_OBS_FIELDS_PER_HAND * BJ_MAX_HANDS)
 
 /**
- * Features: flat float vector, normalised to [0, 1], with the same layout as
- * the observation. Ratios that can exceed 1
- * in rare states (bust totals, many-card hands) are clamped.
+ * Features: flat float vector, normalised to [0, 1]: BJ_FEATURES_FIXED_FIELDS
+ * fixed fields followed by one block of BJ_FEATURES_FIELDS_PER_HAND fields for
+ * each hand (indices shown for BJ_MAX_HANDS = 4):
+ *
+ * 	    0         1       2..7     8..13   14..19   20..25
+ * 	+--------+---------+--------+--------+--------+--------+
+ * 	| dealer | current | hand 0 | hand 1 | hand 2 | hand 3 |
+ * 	| upcard |  hand   |        |        |        |        |
+ * 	+--------+---------+--------+--------+--------+--------+
+ * 	                  /          \
+ * 	 ________________/            \___________________
+ * 	/                                                 \
+ * 	+-------+-------+-------+-------+-------+---------+
+ * 	| best  | soft  | bust  | pair  | card  | doubled |
+ * 	| total | flag  | flag  | flag  | count |  flag   |
+ * 	+-------+-------+-------+-------+-------+---------+
+ * 	   +0      +1      +2      +3      +4       +5
  */
-#define BJ_FEATURES_DEALER_UP_OFFSET 0 // dealer upcard value / 11 (ace = 11)
-#define BJ_FEATURES_CUR_HAND_OFFSET  1 // current hand index / BJ_MAX_HANDS
-#define BJ_FEATURES_HANDS_OFFSET     2 // first hand's block
-
-/* Note: These are offset from the start of the specific hand's block */
-#define BJ_FEATURES_HAND_BEST_TOTAL 0 // best total / 21
-#define BJ_FEATURES_HAND_SOFT       1 // 1 if an ace counts as 11, else 0
-#define BJ_FEATURES_HAND_NCARDS     2 // card count / 8
-#define BJ_FEATURES_HAND_DOUBLED    3 // 1 if doubled down, else 0
-#define BJ_FEATURES_HAND_NUM_FIELDS (BJ_FEATURES_HAND_DOUBLED + 1)
-
-#define BJ_FEATURES_NDIMS 1
+#define BJ_FEATURES_NDIMS           1
+#define BJ_FEATURES_FIXED_FIELDS    2
+#define BJ_FEATURES_FIELDS_PER_HAND 6
 #define BJ_FEATURES_SIZE \
-	(BJ_FEATURES_HANDS_OFFSET + BJ_FEATURES_HAND_NUM_FIELDS * BJ_MAX_HANDS)
+	(BJ_FEATURES_FIXED_FIELDS + BJ_FEATURES_FIELDS_PER_HAND * BJ_MAX_HANDS)
 
 /**
  * String buffer size: phase line + dealer line + one line per hand + null

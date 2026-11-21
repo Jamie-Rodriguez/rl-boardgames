@@ -17,8 +17,8 @@ Available Games
 | Observation: Dimensions           |    [18]     | [3] |    [26]   |   [84]    |   [130]   |        [18]        |
 | Observation: Size                 |      18     |  3  |     26    |     84    |    130    |         18         |
 | Features: Number of Dimensions    |      3      |  1  |     1     |     3     |     3     |         3          |
-| Features: Dimensions              |  [2, 3, 3]  | [3] |    [18]   | [2, 6, 7] | [6, 8, 8] |     [2, 3, 3]      |
-| Features: Size                    |      18     |  3  |     18    |     84    |    384    |         18         |
+| Features: Dimensions              |  [2, 3, 3]  | [3] |    [26]   | [2, 6, 7] | [6, 8, 8] |     [2, 3, 3]      |
+| Features: Size                    |      18     |  3  |     26    |     84    |    384    |         18         |
 
 **Note:** Each game also defines a `STRING_BUF_SIZE` macro.
 
