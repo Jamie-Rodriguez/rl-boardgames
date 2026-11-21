@@ -21,7 +21,7 @@ Available Games
 
 This is not shown in the table above as it is a derived constant for internal formatting and is not relevant to agent integration.
 
-† With the default six-deck shoe: at a chance node the action-list holds one entry per card remaining, so `BLACKJACK_MAX_NUM_ACTIONS` scales as `52 * BLACKJACK_NUM_DECKS` (see [Blackjack](#blackjack)).
+† With the default six-deck shoe: at a chance node the action-list holds one entry per card remaining, so `BJ_MAX_NUM_ACTIONS` scales as `52 * BJ_NUM_DECKS` (see [Blackjack](#blackjack)).
 
 Building
 ========
