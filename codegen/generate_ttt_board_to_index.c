@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "agents/board_index.h"
 #include "games/tic_tac_toe.h"
 
 /**
@@ -50,6 +49,82 @@
  */
 
 /**
+ * NOTE: The macros and functions below are both required by this generator,
+ * and also by the generated file "ttt_board_to_index.h". This way consumers
+ * of the generated file can have the relevant mapping functions provided in
+ * the same place as the lookup table.
+ * Unfortunately, in C99 there's not a nice way to do this, so for now these
+ * macros/functions are literally copied into the generated header (see
+ * main()).
+ * Therefore, if you update any of these macros or functions, be sure to
+ * update them in main() also.
+ * 	- TTT_BOARD_INDEX_SQUARE_STATES
+ * 	- TTT_BOARD_INDEX_NUM_CODES
+ * 	- ttt_features_to_code
+ * 	- ttt_afterstate_to_code
+ */
+#define TTT_BOARD_INDEX_SQUARE_STATES (TTT_NUM_PLAYERS + 1)
+
+#define TTT_BOARD_INDEX_NUM_CODES                                        \
+	(TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
+	 TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
+	 TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
+	 TTT_BOARD_INDEX_SQUARE_STATES * TTT_BOARD_INDEX_SQUARE_STATES * \
+	 TTT_BOARD_INDEX_SQUARE_STATES)
+
+static inline uint64_t ttt_features_to_code(const float features[]) {
+	assert(features != NULL);
+
+	uint64_t code        = 0;
+	uint64_t place_value = 1;
+
+	for (size_t square = 0; square < TTT_BOARD_SIZE; square++) {
+		uint64_t digit = 0;
+
+		for (size_t player = 0; player < TTT_NUM_PLAYERS; player++) {
+			const float feature =
+			        features[player * TTT_BOARD_SIZE + square];
+
+			assert(feature == 0.0f || feature == 1.0f);
+
+			if (feature != 0.0f) {
+				assert(digit == 0); // one piece per square
+				digit = (uint64_t)(player + 1);
+			}
+		}
+
+		code += digit * place_value;
+		place_value *= TTT_BOARD_INDEX_SQUARE_STATES;
+	}
+
+	assert(code < TTT_BOARD_INDEX_NUM_CODES);
+	return code;
+}
+
+static inline uint64_t ttt_afterstate_to_code(const float features[],
+                                              uint64_t action) {
+	assert(features != NULL);
+	assert(action < TTT_BOARD_SIZE);
+
+	float afterstate[TTT_FEATURES_SIZE];
+
+	for (size_t plane = 0; plane < TTT_NUM_PLAYERS; plane++) {
+		const size_t movers_plane = (plane + 1) % TTT_NUM_PLAYERS;
+		const float* from = features + movers_plane * TTT_BOARD_SIZE;
+		float* to         = afterstate + plane * TTT_BOARD_SIZE;
+
+		for (size_t square = 0; square < TTT_BOARD_SIZE; square++)
+			to[square] = from[square];
+
+		assert(to[action] == 0.0f); // the square was empty
+	}
+
+	afterstate[(TTT_NUM_PLAYERS - 1) * TTT_BOARD_SIZE + action] = 1.0f;
+
+	return ttt_features_to_code(afterstate);
+}
+
+/**
  * Indicates a position/state that is unreachable i.e. it does not have an
  * entry in the corresponding lookup table.
  */
@@ -57,11 +132,11 @@
 
 #define STACK_CAPACITY (1 + TTT_MAX_TURNS * TTT_MAX_NUM_DECISION_ACTIONS)
 
-/* Every quarter turn, each with and without a mirror first */
-#define NUM_ROTATIONS 4
-#if 2 * NUM_ROTATIONS != TTT_BOARD_INDEX_NUM_SYMMETRIES
-#error "TTT_BOARD_INDEX_NUM_SYMMETRIES is not the symmetries built below"
+#if TTT_NUM_ROWS != TTT_NUM_COLS
+#error "TTT_BOARD_INDEX_NUM_SYMMETRIES requires a square board (quarter turns)"
 #endif
+#define NUM_ROTATIONS                  4
+#define TTT_BOARD_INDEX_NUM_SYMMETRIES (2 * NUM_ROTATIONS)
 
 typedef struct Stack {
 	uint64_t states[STACK_CAPACITY][TTT_STATE_SIZE];
@@ -386,9 +461,11 @@ int main(void) {
 	printf("#ifndef TTT_BOARD_TO_INDEX_H\n");
 	printf("#define TTT_BOARD_TO_INDEX_H\n\n");
 
+	printf("#include <assert.h>\n");
+	printf("#include <stddef.h>\n");
 	printf("#include <stdint.h>\n\n");
 
-	printf("#include \"agents/board_index.h\"\n\n");
+	printf("#include \"games/tic_tac_toe.h\"\n\n");
 
 	printf("/* Entry to indicate an unreachable state */\n");
 	printf("#define TTT_BOARD_TO_INDEX_NONE UINT16_C(0x%04X)\n\n",
@@ -399,18 +476,91 @@ int main(void) {
 	printf("#define TTT_BOARD_INDEX_NUM_DECISION_STATES %llu\n\n",
 	       (unsigned long long)num_playable_states);
 
-	printf("/* The table below was built against these two constants "
-	       "*/\n");
+	printf("#define TTT_BOARD_INDEX_SQUARE_STATES (TTT_NUM_PLAYERS + 1)\n");
+	printf("\n");
+	printf("#define TTT_BOARD_INDEX_NUM_CODES                              "
+	       "          \\\n");
+	printf("\t(TTT_BOARD_INDEX_SQUARE_STATES * "
+	       "TTT_BOARD_INDEX_SQUARE_STATES * \\\n");
+	printf("\t TTT_BOARD_INDEX_SQUARE_STATES * "
+	       "TTT_BOARD_INDEX_SQUARE_STATES * \\\n");
+	printf("\t TTT_BOARD_INDEX_SQUARE_STATES * "
+	       "TTT_BOARD_INDEX_SQUARE_STATES * \\\n");
+	printf("\t TTT_BOARD_INDEX_SQUARE_STATES * "
+	       "TTT_BOARD_INDEX_SQUARE_STATES * \\\n");
+	printf("\t TTT_BOARD_INDEX_SQUARE_STATES)\n");
+	printf("\n");
+
+	printf("/* The table below was built against this constant */\n");
 	printf("#if TTT_BOARD_INDEX_NUM_CODES != %llu\n",
 	       (unsigned long long)TTT_BOARD_INDEX_NUM_CODES);
-	printf("#error \"agents/board_index.h changed shape: re-run "
-	       "generate_ttt_board_to_index\"\n");
-	printf("#endif\n");
-	printf("#if TTT_BOARD_INDEX_NUM_SYMMETRIES != %d\n",
-	       TTT_BOARD_INDEX_NUM_SYMMETRIES);
-	printf("#error \"agents/board_index.h changed shape: re-run "
+	printf("#error \"games/tic_tac_toe.h changed shape: re-run "
 	       "generate_ttt_board_to_index\"\n");
 	printf("#endif\n\n");
+
+	printf("static inline uint64_t ttt_features_to_code(const float "
+	       "features[]) {\n");
+	printf("\tassert(features != NULL);\n");
+	printf("\n");
+	printf("\tuint64_t code        = 0;\n");
+	printf("\tuint64_t place_value = 1;\n");
+	printf("\n");
+	printf("\tfor (size_t square = 0; square < TTT_BOARD_SIZE; square++) "
+	       "{\n");
+	printf("\t\tuint64_t digit = 0;\n");
+	printf("\n");
+	printf("\t\tfor (size_t player = 0; player < TTT_NUM_PLAYERS; "
+	       "player++) {\n");
+	printf("\t\t\tconst float feature =\n");
+	printf("\t\t\t        features[player * TTT_BOARD_SIZE + square];\n");
+	printf("\n");
+	printf("\t\t\tassert(feature == 0.0f || feature == 1.0f);\n");
+	printf("\n");
+	printf("\t\t\tif (feature != 0.0f) {\n");
+	printf("\t\t\t\tassert(digit == 0); // one piece per square\n");
+	printf("\t\t\t\tdigit = (uint64_t)(player + 1);\n");
+	printf("\t\t\t}\n");
+	printf("\t\t}\n");
+	printf("\n");
+	printf("\t\tcode += digit * place_value;\n");
+	printf("\t\tplace_value *= TTT_BOARD_INDEX_SQUARE_STATES;\n");
+	printf("\t}\n");
+	printf("\n");
+	printf("\tassert(code < TTT_BOARD_INDEX_NUM_CODES);\n");
+	printf("\treturn code;\n");
+	printf("}\n");
+	printf("\n");
+	printf("static inline uint64_t ttt_afterstate_to_code(const float "
+	       "features[],\n");
+	printf("                                              uint64_t action) "
+	       "{\n");
+	printf("\tassert(features != NULL);\n");
+	printf("\tassert(action < TTT_BOARD_SIZE);\n");
+	printf("\n");
+	printf("\tfloat afterstate[TTT_FEATURES_SIZE];\n");
+	printf("\n");
+	printf("\tfor (size_t plane = 0; plane < TTT_NUM_PLAYERS; plane++) "
+	       "{\n");
+	printf("\t\tconst size_t movers_plane = (plane + 1) %% "
+	       "TTT_NUM_PLAYERS;\n");
+	printf("\t\tconst float* from = features + movers_plane * "
+	       "TTT_BOARD_SIZE;\n");
+	printf("\t\tfloat* to         = afterstate + plane * "
+	       "TTT_BOARD_SIZE;\n");
+	printf("\n");
+	printf("\t\tfor (size_t square = 0; square < TTT_BOARD_SIZE; "
+	       "square++)\n");
+	printf("\t\t\tto[square] = from[square];\n");
+	printf("\n");
+	printf("\t\tassert(to[action] == 0.0f); // the square was empty\n");
+	printf("\t}\n");
+	printf("\n");
+	printf("\tafterstate[(TTT_NUM_PLAYERS - 1) * TTT_BOARD_SIZE + action] "
+	       "= 1.0f;\n");
+	printf("\n");
+	printf("\treturn ttt_features_to_code(afterstate);\n");
+	printf("}\n");
+	printf("\n");
 
 	printf("/**\n");
 	printf(" * Position, encoded as a base-3 number -> class index.\n");
@@ -448,6 +598,20 @@ int main(void) {
 	}
 
 	printf("};\n\n");
+
+	printf("static inline uint64_t ttt_afterstate_to_index(const float "
+	       "features[],\n");
+	printf("                                               uint64_t "
+	       "action) {\n");
+	printf("\tconst uint64_t index =\n");
+	printf("\t        ttt_board_to_index[ttt_afterstate_to_code(features, "
+	       "action)];\n");
+	printf("\n");
+	printf("\tassert(index != TTT_BOARD_TO_INDEX_NONE);\n");
+	printf("\n");
+	printf("\treturn index;\n");
+	printf("}\n");
+	printf("\n");
 
 	printf("#endif\n");
 
