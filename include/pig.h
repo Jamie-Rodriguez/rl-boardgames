@@ -6,6 +6,10 @@
 #define PIG_NUM_PLAYERS 2
 #define PIG_TARGET      100
 
+#if PIG_TARGET + 5 > 255
+#error "PIG_TARGET too large for the uint8 observation encoding"
+#endif
+
 /**
  * State layout:
  * 	[0]:        the player whose turn it currently is

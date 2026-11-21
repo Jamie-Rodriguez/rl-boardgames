@@ -24,8 +24,8 @@
 
 #define TTT_MAX_NUM_DECISION_ACTIONS TTT_BOARD_SIZE
 /* Deterministic: every action is a decision (one per empty square) */
-#define TTT_MAX_NUM_CHANCE_ACTIONS   0
-#define TTT_MAX_NUM_ACTIONS          TTT_MAX_NUM_DECISION_ACTIONS
+#define TTT_MAX_NUM_CHANCE_ACTIONS 0
+#define TTT_MAX_NUM_ACTIONS        TTT_MAX_NUM_DECISION_ACTIONS
 
 /**
  * Note `observation` shape is the same as the `features` shape for this
