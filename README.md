@@ -10,6 +10,9 @@ Available Games
 | Max Actions                       |      9      |  6  |    312†   |     7     |     48    |
 | Max Decision Actions              |      9      |  2  |     5     |     7     |     48    |
 | Max Chance Actions                |      0      |  6  |    312†   |     0     |     0     |
+| Action Space Size                 |      9      |  2  |     5     |     7     |    256    |
+| Max Turns                         |      9      | ∞ ‡ |    88§    |     42    |  15,632§  |
+| State Space Size                  |    5,478    | ∞ ‡ |    ∞ ‡    | 4.5×10¹²  |    ∞ ‡    |
 | Observation: Number of Dimensions |      3      |  1  |     1     |     3     |     3     |
 | Observation: Dimensions           |  [2, 3, 3]  | [3] |    [31]   | [2, 6, 7] | [6, 8, 8] |
 | Observation: Size                 |      18     |  3  |     31    |     84    |    384    |
@@ -22,6 +25,10 @@ Available Games
 This is not shown in the table above as it is a derived constant for internal formatting and is not relevant to agent integration.
 
 † With the default six-deck shoe: at a chance node the action-list holds one entry per card remaining, so `BJ_MAX_NUM_ACTIONS` scales as `52 * BJ_NUM_DECKS` (see [Blackjack](#blackjack)).
+
+‡ No finite bound exists (e.g. pig can re-roll forever) or the count exceeds a `uint64` (blackjack's shoe compositions, checkers' ~5 × 10²⁰ positions); the macro is defined as `UINT64_MAX`, per the convention in [include/games/board_game.h](include/games/board_game.h).
+
+§ A documented loose upper bound rather than an _exact_ maximum (see the derivation in the game's header).
 
 Building
 ========
@@ -104,6 +111,9 @@ Every game must define the following compile-time macros, each prefixed with a n
 | `_MAX_NUM_ACTIONS`          | Maximum number of actions that `get_valid_actions()` can return in *any* state - always the larger of the two macros below.                                                                                                                            |
 | `_MAX_NUM_DECISION_ACTIONS` | Maximum actions at a *decision* node. Most agents only need an action buffer of this size; since the game driver, not the agent, samples chance nodes. Agents that expand chance nodes themselves (e.g. MCTS) must size for `MAX_NUM_ACTIONS` instead. |
 | `_MAX_NUM_CHANCE_ACTIONS`   | Maximum actions at a *chance* node (`0` for deterministic games).                                                                                                                                                                                      |
+| `_ACTION_SPACE_SIZE`        | Size of the fixed decision-action ID space: equal to it for densely-numbered actions, larger for factorised encodings with dead indices.                                                                                                                |
+| `_MAX_TURNS`                | Maximum decision plies (turns) across all seats in one episode, chance events excluded; `UINT64_MAX` when no finite bound exists.                                                                                                                       |
+| `_STATE_SPACE_SIZE`         | Number of distinct reachable states. Exact when known, otherwise a documented upper bound, saturating at `UINT64_MAX` when beyond `uint64` range. Tabular and enumeration methods size their storage with this.                                         |
 | `_STRING_BUF_SIZE`          | Minimum `char` buffer size (including null terminator) that `to_string()` requires.                                                                                                                                                                    |
 | `_OBS_NDIMS`                | Number of dimensions in the observation tensor (e.g. `1` for a flat vector, `3` for channels × rows × cols).                                                                                                                                           |
 | `_OBS_SIZE`                 | Total number of elements in the observation. Must equal the product of the first `OBS_NDIMS` entries in `obs_dims`.                                                                                                                                    |

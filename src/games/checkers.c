@@ -4,8 +4,8 @@
 #include "games/checkers.h"
 
 
-// Plies/moves without a capture or man move before the game is drawn
-#define DRAW_PLIES 80
+// Local alias of the draw budget exported by checkers.h
+#define DRAW_PLIES CHECKERS_DRAW_PLIES
 
 #define ACTION(square, direction) ((square) * CHECKERS_NUM_DIRS + (direction))
 #define DIR_UP_LEFT               0

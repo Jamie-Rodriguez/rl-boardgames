@@ -24,6 +24,15 @@
 #define C4_MAX_NUM_CHANCE_ACTIONS   0
 #define C4_MAX_NUM_ACTIONS          C4_MAX_NUM_DECISION_ACTIONS
 
+/* Column IDs are dense, so the action-ID space is the columns */
+#define C4_ACTION_SPACE_SIZE C4_MAX_NUM_DECISION_ACTIONS
+
+/* Every turn fills a cell */
+#define C4_MAX_TURNS (C4_NUM_ROWS * C4_NUM_COLS)
+
+/* Legal positions on the standard 7x6 board, as counted by John Tromp */
+#define C4_STATE_SPACE_SIZE UINT64_C(4531985219092)
+
 /**
  * Observation: two 6x7 binary planes, from the observing player's
  * perspective, row-major with row 0 (the bottom row) first:

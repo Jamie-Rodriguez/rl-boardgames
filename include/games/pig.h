@@ -26,6 +26,19 @@
 #define PIG_MAX_NUM_CHANCE_ACTIONS   6 /* d6 die faces (0..5) */
 #define PIG_MAX_NUM_ACTIONS          PIG_MAX_NUM_CHANCE_ACTIONS
 
+/* HOLD and ROLL are the whole decision-action ID space */
+#define PIG_ACTION_SPACE_SIZE PIG_MAX_NUM_DECISION_ACTIONS
+
+/**
+ * Nothing stops a player from rolling (and busting) forever, so
+ * episodes - and with them the turn total, and therefore the state
+ * space - admit no worst-case bound: games merely end with
+ * probability 1. Both macros saturate, per the convention in
+ * board_game.h.
+ */
+#define PIG_MAX_TURNS        UINT64_MAX
+#define PIG_STATE_SPACE_SIZE UINT64_MAX
+
 /**
  * Observation: flat uint8 vector in the form
  * 	[my_score, next_player_score, ..., last_player_score, turn_total]

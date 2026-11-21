@@ -27,6 +27,19 @@
 #define TTT_MAX_NUM_CHANCE_ACTIONS 0
 #define TTT_MAX_NUM_ACTIONS        TTT_MAX_NUM_DECISION_ACTIONS
 
+/* Square IDs are dense, so the action-ID space is the board itself */
+#define TTT_ACTION_SPACE_SIZE TTT_MAX_NUM_DECISION_ACTIONS
+
+/* Every turn fills a square */
+#define TTT_MAX_TURNS TTT_BOARD_SIZE
+
+/**
+ * The classic enumeration result for 3x3 tic-tac-toe: distinct
+ * positions reachable in play, terminal positions included (the side
+ * to move is implied by the piece counts).
+ */
+#define TTT_STATE_SPACE_SIZE 5478
+
 /**
  * Note `observation` shape is the same as the `features` shape for this
  * tic-tac-toe implementation

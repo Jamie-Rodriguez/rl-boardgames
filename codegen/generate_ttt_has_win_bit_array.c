@@ -52,16 +52,16 @@ int main(int argc, char* argv[]) {
 	printf(" * Using 8 × 64-bit ints to contains the 512 bits\n");
 	printf(" *\n");
 	printf(" * To determine if a bitboard has a win:\n");
-	printf(" *\t1. Determine which 64-bit word the bitboard resides in:\n");
-	printf(" *\t\thas_in_bits[bitboard >> 6]\n");
-	printf(" *\t\t(This is an floor division by 64)\n");
-	printf(" *\t2. Determine which bit in the 64-bit word the bitboard "
+	printf(" * \t1. Determine which 64-bit word the bitboard resides in:\n");
+	printf(" * \t\thas_in_bits[bitboard >> 6]\n");
+	printf(" * \t\t(This is an floor division by 64)\n");
+	printf(" * \t2. Determine which bit in the 64-bit word the bitboard "
 	       "corresponds to:\n");
-	printf(" *\t\tbitboard & 63\n");
-	printf(" *\t3. Shift the bit to the first position:\n");
-	printf(" *\t\thas_win_bits[b >> 6] >> (b & 63)\n");
-	printf(" *\t4. Mask out the other bits except the first:\n");
-	printf(" *\t\t(has_win_bits[b >> 6] >> (b & 63)) & 1\n");
+	printf(" * \t\tbitboard & 63\n");
+	printf(" * \t3. Shift the bit to the first position:\n");
+	printf(" * \t\thas_win_bits[b >> 6] >> (b & 63)\n");
+	printf(" * \t4. Mask out the other bits except the first:\n");
+	printf(" * \t\t(has_win_bits[b >> 6] >> (b & 63)) & 1\n");
 	printf(" */\n");
 	printf("static const uint64_t has_win_bits[] = {\n");
 	for (size_t i = 0; i < HAS_WIN_LEN; i++)
