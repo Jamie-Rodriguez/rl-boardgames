@@ -101,17 +101,11 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.c | $(OBJ_DIRS)
 # for the next build to compile against
 .DELETE_ON_ERROR:
 
-# Compile a generator, tracking the headers it reads: a generator that derives
-# its output from a constant in a header must be rebuilt when that header
-# changes, or it goes on emitting (or refusing to emit) against the old value
+.SECONDARY:
+
 $(CODEGEN_OBJDIR)/%.o: $(CODEGENDIR)/%.c | $(OBJ_DIRS)
 	$(CC) $(CODEGEN_CFLAGS) -MMD -MP -c $< -o $@
 
-# Link a generator: its own object, plus any library sources it pulls in
-# (below). Those are compiled here rather than reused from $(BUILDDIR) so that
-# a generator never inherits the build mode's sanitizers or LTO. Generated
-# headers listed as prerequisites are dependencies to track, not inputs to
-# compile, hence the filter
 $(BUILDDIR)/generate_%: $(CODEGEN_OBJDIR)/generate_%.o | $(BUILDDIR)
 	$(CC) $(CODEGEN_CFLAGS) -o $@ $(filter %.o %.c,$^)
 
