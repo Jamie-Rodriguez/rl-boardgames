@@ -11,7 +11,11 @@ BINDIR     = bin/$(BUILD)
 CODEGENDIR = codegen
 
 CC       = clang
-AR       = llvm-ar
+# Use LLVM AR if available, so that LTO can be done more reliably
+ifneq ($(filter default undefined,$(origin AR)),)
+    LLVM_AR := $(shell $(CC) -print-prog-name=llvm-ar 2>/dev/null)
+    AR := $(if $(shell command -v '$(LLVM_AR)' 2>/dev/null),$(LLVM_AR),ar)
+endif
 ARFLAGS  = rcs
 
 CFLAGS_COMMON = -std=c99 -march=native \
